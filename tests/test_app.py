@@ -199,14 +199,37 @@ def test_csv_export_returns_none_without_clicks():
     assert export_filtered_csv(None, "All", None, None) is None
 
 
-def test_csv_export_returns_download_data():
-    """Verify that clicking export generates downloadable CSV data."""
-    from src.app import export_filtered_csv
 
-    result = export_filtered_csv(1, "All", None, None)
+def test_csv_export_returns_download_data(monkeypatch):
+    """Verify that clicking export generates downloadable CSV data."""
+    import pandas as pd
+    from src import app as app_module
+
+    sample_sales = pd.DataFrame(
+        {
+            "InvoiceNo": ["536365", "536366"],
+            "StockCode": ["85123A", "71053"],
+            "Description": ["Product A", "Product B"],
+            "InvoiceDate": pd.to_datetime(
+                ["2010-12-01", "2010-12-02"]
+            ),
+            "Quantity": [2, 1],
+            "UnitPrice": [3.50, 5.00],
+            "Revenue": [7.00, 5.00],
+            "Country": ["United Kingdom", "France"],
+            "CustomerID": [17850, 12583],
+        }
+    )
+
+    monkeypatch.setattr(app_module, "sales", sample_sales)
+
+    result = app_module.export_filtered_csv(1, "All", None, None)
 
     assert result is not None
     assert isinstance(result, dict)
     assert "content" in result
     assert "filename" in result
     assert result["filename"] == "retailpulse_filtered_sales.csv"
+    assert "InvoiceNo" in result["content"]
+    assert "536365" in result["content"]
+    assert "536366" in result["content"]
