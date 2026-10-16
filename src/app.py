@@ -135,6 +135,7 @@ best_month_revenue = (
 chart_template = "plotly_white"
 
 app = Dash(__name__)
+server = app.server
 app.title = "RetailPulse AI"
 
 card_style = {
