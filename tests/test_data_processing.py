@@ -186,3 +186,182 @@ def test_sales_transactions_exclude_zero_quantity(sample_transactions):
     sales = get_sales_transactions(cleaned)
 
     assert "1001" not in sales["InvoiceNo"].astype(str).values
+
+
+
+def test_sales_transactions_exclude_accounting_adjustments(sample_transactions):
+    sample_transactions.loc[0, "StockCode"] = "B"
+
+    cleaned = clean_transactions(sample_transactions)
+    sales = get_sales_transactions(cleaned)
+
+    assert "1001" not in sales["InvoiceNo"].astype(str).values
+
+
+
+def test_sales_transactions_exclude_cancellations(sample_transactions):
+    sample_transactions.loc[0, "InvoiceNo"] = "C1001"
+
+    cleaned = clean_transactions(sample_transactions)
+    sales = get_sales_transactions(cleaned)
+
+    assert "C1001" not in sales["InvoiceNo"].astype(str).values
+
+
+
+def test_sales_transactions_calculate_total_revenue(sample_transactions):
+    cleaned = clean_transactions(sample_transactions)
+    sales = get_sales_transactions(cleaned)
+
+    expected_revenue = 25.0
+
+    assert sales["Revenue"].sum() == pytest.approx(expected_revenue)
+
+
+def test_clean_transactions_preserves_sales_with_missing_customer_id(sample_transactions):
+    cleaned = clean_transactions(sample_transactions)
+
+    transaction = cleaned.loc[
+        cleaned["InvoiceNo"] == "1005"
+    ].iloc[0]
+
+    assert pd.isna(transaction["CustomerID"])
+    assert transaction["TransactionType"] == "zero_price_review"
+
+
+def test_clean_transactions_removes_missing_country(sample_transactions):
+    sample_transactions.loc[0, "Country"] = None
+
+    cleaned = clean_transactions(sample_transactions)
+
+    assert "1001" not in cleaned["InvoiceNo"].astype(str).values
+
+
+def test_clean_transactions_removes_missing_invoice_number(sample_transactions):
+    sample_transactions.loc[0, "InvoiceNo"] = None
+
+    cleaned = clean_transactions(sample_transactions)
+
+    assert "1001" not in cleaned["InvoiceNo"].astype(str).values
+
+
+
+def test_clean_transactions_removes_missing_invoice_number(sample_transactions):
+    sample_transactions.loc[0, "InvoiceNo"] = None
+
+    cleaned = clean_transactions(sample_transactions)
+
+    assert "1001" not in cleaned["InvoiceNo"].astype(str).values
+
+
+def test_clean_transactions_removes_missing_quantity(sample_transactions):
+    sample_transactions.loc[0, "Quantity"] = None
+
+    cleaned = clean_transactions(sample_transactions)
+
+    assert "1001" not in cleaned["InvoiceNo"].astype(str).values
+
+
+def test_clean_transactions_removes_missing_unit_price(sample_transactions):
+    sample_transactions.loc[0, "UnitPrice"] = None
+
+    cleaned = clean_transactions(sample_transactions)
+
+    assert "1001" not in cleaned["InvoiceNo"].astype(str).values
+
+
+def test_sales_transactions_exclude_nonpositive_unit_prices(sample_transactions):
+    sample_transactions.loc[0, "UnitPrice"] = 0
+    sample_transactions.loc[1, "UnitPrice"] = -5.0
+
+    cleaned = clean_transactions(sample_transactions)
+    sales = get_sales_transactions(cleaned)
+
+    assert not sales["InvoiceNo"].astype(str).isin(["1001", "1002"]).any()
+    assert (sales["UnitPrice"] > 0).all()
+
+
+def test_clean_transactions_classifies_return_or_reversal(sample_transactions):
+    sample_transactions.loc[0, "Quantity"] = -2
+
+    cleaned = clean_transactions(sample_transactions)
+
+    transaction = cleaned.loc[
+        cleaned["InvoiceNo"] == "1001"
+    ].iloc[0]
+
+    assert transaction["TransactionType"] == "return_or_reversal"
+    assert transaction["Revenue"] == -20.0
+
+
+def test_clean_transactions_classifies_cancellation(sample_transactions):
+    sample_transactions.loc[0, "InvoiceNo"] = "C1001"
+
+    cleaned = clean_transactions(sample_transactions)
+
+    transaction = cleaned.loc[
+        cleaned["InvoiceNo"] == "C1001"
+    ].iloc[0]
+
+    assert transaction["TransactionType"] == "cancellation"
+
+
+def test_quality_report_counts_missing_customer_ids(sample_transactions):
+    report = create_quality_report(sample_transactions)
+
+    assert report["missing_customer_ids"] == 1
+
+
+def test_quality_report_handles_empty_dataset(sample_transactions):
+    empty_transactions = sample_transactions.iloc[0:0].copy()
+
+    report = create_quality_report(empty_transactions)
+
+    assert report["rows"] == 0
+    assert report["cancellation_invoice_rows"] == 0
+    assert report["negative_quantity_rows"] == 0
+    assert report["zero_price_rows"] == 0
+    assert report["missing_customer_ids"] == 0
+
+
+def test_sales_transactions_returns_empty_when_all_are_cancellations(sample_transactions):
+    sample_transactions["InvoiceNo"] = [
+        "C1001",
+        "C1002",
+        "C1003",
+        "C1004",
+        "C1005",
+    ]
+
+    cleaned = clean_transactions(sample_transactions)
+    sales = get_sales_transactions(cleaned)
+
+    assert sales.empty
+
+
+
+def test_sales_transactions_preserve_required_columns(sample_transactions):
+    cleaned = clean_transactions(sample_transactions)
+    sales = get_sales_transactions(cleaned)
+
+    required_columns = [
+        "InvoiceNo",
+        "StockCode",
+        "Description",
+        "Quantity",
+        "InvoiceDate",
+        "UnitPrice",
+        "CustomerID",
+        "Country",
+        "Revenue",
+    ]
+
+    missing_columns = [
+        column for column in required_columns
+        if column not in sales.columns
+    ]
+
+    assert not missing_columns, (
+        f"Missing columns: {missing_columns}. "
+        f"Available columns: {sales.columns.tolist()}"
+    )
