@@ -21,7 +21,6 @@ Thumbs.db
 
 
 # Local Python environment configuration
-.python-version
 .env.*
 !.env.example
 
