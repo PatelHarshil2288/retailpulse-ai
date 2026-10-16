@@ -18,3 +18,23 @@ venv/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+
+# Local Python environment configuration
+.python-version
+.env.*
+!.env.example
+
+# IDE and editor settings
+.vscode/
+.idea/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
