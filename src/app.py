@@ -1032,8 +1032,8 @@ def update_chart(
         )
 
         contribution_fig.update_traces(
-            textposition="inside",
-            textinfo="percent",
+            textposition="outside",
+            textinfo="none",
             customdata=country_contribution[["Revenue"]].to_numpy(),
             hovertemplate=(
                 "<b>%{label}</b><br>"
@@ -1063,12 +1063,15 @@ def update_chart(
 
 
     contribution_fig.update_layout(
-        title_x=0.02,
-        margin={"l": 20, "r": 20, "t": 60, "b": 20},
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-        font={"family": "Arial, sans-serif", "color": "#172033"},
-    )
+    title_x=0.02,
+    margin={"l": 20, "r": 20, "t": 60, "b": 20},
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+    font={"family": "Arial, sans-serif", "color": "#172033"},
+    showlegend=True,
+    uniformtext_minsize=10,
+    uniformtext_mode="hide",
+)
 
 
 
