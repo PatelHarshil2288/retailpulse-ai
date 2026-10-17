@@ -1,0 +1,243 @@
+
+/* ==========================================
+   RetailPulse AI — Modern SaaS Theme
+   ========================================== */
+
+:root {
+    --navy-950: #101a33;
+    --navy-900: #172544;
+    --navy-800: #20365e;
+    --blue-600: #4169f5;
+    --blue-100: #e9efff;
+    --teal-500: #14b8a6;
+    --page-bg: #f3f6fc;
+    --card-bg: #ffffff;
+    --text-main: #172033;
+    --text-muted: #68758b;
+    --border-color: #e6ebf3;
+    --card-shadow: 0 6px 24px rgba(22, 39, 75, 0.06);
+}
+
+/* Base page */
+body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--text-main);
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+    color: var(--text-main);
+    letter-spacing: -0.035em;
+}
+
+h1 {
+    font-weight: 800;
+}
+
+h2, h3 {
+    font-weight: 700;
+}
+
+/* Dashboard cards and panels */
+.saas-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: var(--card-shadow);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.saas-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(22, 39, 75, 0.09);
+}
+
+/* KPI cards */
+.kpi-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: var(--card-shadow);
+}
+
+.kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--blue-600);
+}
+
+.kpi-card h2,
+.kpi-card h3 {
+    margin-bottom: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 0;
+}
+
+/* Section headings */
+.section-title {
+    font-size: 21px;
+    font-weight: 750;
+    margin: 0 0 6px;
+}
+
+.section-description {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+    margin-top: 0;
+}
+
+/* Buttons */
+button {
+    font-family: inherit;
+    font-weight: 650;
+    transition: transform 150ms ease, filter 150ms ease;
+}
+
+button:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+}
+
+button:focus-visible {
+    outline: 3px solid rgba(65, 105, 245, 0.35);
+    outline-offset: 3px;
+}
+
+/* Dropdowns and date controls */
+.Select-control,
+.DateInput_input,
+.SingleDatePickerInput {
+    border-radius: 10px !important;
+    border-color: var(--border-color) !important;
+}
+
+.DateInput_input {
+    font-family: inherit !important;
+    font-size: 14px !important;
+    padding: 10px !important;
+}
+
+/* Plotly chart containers */
+.js-plotly-plot {
+    width: 100%;
+}
+
+.js-plotly-plot .plotly .modebar {
+    opacity: 0.45;
+}
+
+.js-plotly-plot .plotly .modebar:hover {
+    opacity: 1;
+}
+
+/* Footer */
+footer {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* Small-screen adjustments */
+@media (max-width: 700px) {
+    .saas-card,
+    .kpi-card {
+        padding: 16px;
+        border-radius: 14px;
+    }
+
+    h1 {
+        font-size: 26px;
+    }
+
+    .section-title {
+        font-size: 19px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+
+
+/* ==========================================
+   RetailPulse AI — Sidebar Layout
+   ========================================== */
+
+.sidebar {
+    width: 248px;
+    min-width: 248px;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding: 30px 20px;
+    background: #14213d;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-item {
+    padding: 12px 14px;
+    margin: 5px 0;
+    border-radius: 10px;
+    color: #d3def5;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: default;
+}
+
+.sidebar-item-active {
+    background: #4169f5;
+    color: #ffffff;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    padding: 28px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 800px) {
+    .sidebar {
+        width: 190px;
+        min-width: 190px;
+        padding: 24px 12px;
+    }
+
+    .main-content {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 600px) {
+    .sidebar {
+        display: none;
+    }
+
+    .main-content {
+        padding: 14px;
+    }
+}

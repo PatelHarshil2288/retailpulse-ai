@@ -134,132 +134,245 @@ best_month_revenue = (
 
 chart_template = "plotly_white"
 
-app = Dash(__name__)
+app = Dash(
+    __name__,
+    assets_folder="../assets",
+)
 server = app.server
 app.title = "RetailPulse AI"
 
+
 card_style = {
     "background": "white",
-    "padding": "22px",
-    "borderRadius": "14px",
-    "boxShadow": "0 3px 12px #15264b12",
+    "padding": "24px",
+    "borderRadius": "18px",
+    "border": "1px solid #e6ebf3",
+    "boxShadow": "0 6px 24px rgba(22, 39, 75, 0.06)",
+    "transition": "box-shadow 180ms ease",
 }
+
 
 app.layout = html.Div(
     style={
-        "fontFamily": "Arial, sans-serif",
-        "backgroundColor": "#f3f6fb",
+        "fontFamily": '"Inter", "Segoe UI", Arial, sans-serif',
+        "backgroundColor": "#f3f6fc",
         "minHeight": "100vh",
-        "padding": "28px",
         "color": "#172033",
+        "boxSizing": "border-box",
+        "display": "flex",
+        "alignItems": "stretch",
+        "padding": "0",
     },
     children=[
         html.Div(
-            style={
-                "background": "linear-gradient(120deg, #14213d, #2457a7)",
-                "padding": "28px",
-                "borderRadius": "18px",
-                "color": "white",
-                "marginBottom": "24px",
-            },
+            className="sidebar",
             children=[
-                html.H1("RetailPulse AI - Retail Analytics"),
-                html.P(
-                    "Interactive Retail Analytics & Customer Intelligence",
-                    style={"fontSize": "17px"},
-                ),
-                html.P(
-                    "Powered by the UCI Online Retail dataset | "
-                    "December 2010 - December 2011 | Currency: GBP (£)",
-                    style={"fontSize": "13px"},
-                ),
-                html.P(
-                    "Revenue represents gross sales from positive-quantity, "
-                    "positive-price transactions; returns are not deducted.",
-                    style={"fontSize": "12px"},
-                ),
-            ],
-        ),
-
-        html.Div(
-            style={
-                "display": "grid",
-                "gridTemplateColumns": "repeat(auto-fit, minmax(190px, 1fr))",
-                "gap": "16px",
-                "marginBottom": "24px",
-            },
-            children=[
-                html.Div(
-                    [
-                        html.P("Gross Sales Revenue"),
-                        html.H2(
-                                 f"£{total_revenue:,.2f}",
-                                 id="gross-revenue-value",
-                                ),
-                    ],
-                    style=card_style,
-                ),
-                html.Div(
-                    [
-                        html.P("Unique Orders"),
-                        html.H2(f"{total_orders:,}",
-                        id="unique-orders-value",
-                        ),
-                    ],
-                    style=card_style,
-                ),
-                html.Div(
-                    [
-                        html.P("Average Order Value"),
-                        html.H2(f"£{average_order_value:,.2f}",
-                                id="average-order-value",
-                            ),
-                    ],
-                    style=card_style,
-                ),
-                
-                html.Div(
-                    [
-                        html.P(
-                            "Monthly Revenue Growth",
-                            style={"fontSize": "14px", "color": "#64748b"},
-                        ),
-                        html.H3(
-                            id="monthly-growth-value",
-                            children="N/A",
-                            style={"margin": "0", "color": "#172033"},
-                        ),
-                        html.P(
-                            "Compared with the previous month",
-                            style={"fontSize": "12px", "color": "#64748b"},
-                        ),
-                    ],
+                html.H2(
+                    "RetailPulse",
                     style={
-                        "backgroundColor": "white",
-                        "padding": "20px",
-                        "borderRadius": "12px",
-                        "boxShadow": "0 2px 8px rgba(0,0,0,0.06)",
+                        "color": "#ffffff",
+                        "fontSize": "25px",
+                        "fontWeight": "800",
+                        "marginBottom": "4px",
+                        "letterSpacing": "-1px",
                     },
                 ),
-
+                html.P(
+                    "AI ANALYTICS",
+                    style={
+                        "color": "#9fb4e8",
+                        "fontSize": "10px",
+                        "fontWeight": "700",
+                        "letterSpacing": "2px",
+                        "marginTop": "0",
+                        "marginBottom": "38px",
+                    },
+                ),
+                html.P(
+                    "WORKSPACE",
+                    style={
+                        "color": "#8497bd",
+                        "fontSize": "10px",
+                        "fontWeight": "700",
+                        "letterSpacing": "1.5px",
+                    },
+                ),
+                html.Div(
+                    "▦   Overview",
+                    className="sidebar-item sidebar-item-active",
+                ),
+                html.P(
+                    "DATASET",
+                    style={
+                        "color": "#8497bd",
+                        "fontSize": "10px",
+                        "fontWeight": "700",
+                        "letterSpacing": "1.5px",
+                        "marginTop": "28px",
+                    },
+                ),
+                html.Div(
+                    "◫   Retail Analytics",
+                    className="sidebar-item",
+                ),
+                html.Div(
+                    "◎   Data Quality",
+                    className="sidebar-item",
+                ),
+                html.Div(
+                    "↗   Business Insights",
+                    className="sidebar-item",
+                ),
+                html.Div(style={"flex": "1"}),
+                html.P(
+                    "ONLINE RETAIL",
+                    style={
+                        "color": "#8497bd",
+                        "fontSize": "10px",
+                        "fontWeight": "700",
+                        "letterSpacing": "1.5px",
+                    },
+                ),
+                html.P(
+                    "Portfolio Dashboard",
+                    style={
+                        "color": "#ffffff",
+                        "fontSize": "13px",
+                    },
+                ),
             ],
         ),
+        html.Div(
+            className="main-content",
+            children=[
+                html.Div(
+                    style={
+                        "background": "linear-gradient(120deg, #14213d, #2457a7)",
+                        "padding": "28px",
+                        "borderRadius": "18px",
+                        "color": "white",
+                        "marginBottom": "24px",
+                        "boxShadow": "0 12px 30px rgba(23, 37, 68, 0.18)",
+                        "border": "1px solid rgba(255, 255, 255, 0.12)",
+                    },
+                    children=[
+                        html.H1("RetailPulse AI - Retail Analytics",
+                                style={
+                                    "color": "white",
+                                    "fontSize": "34px",
+                                    "fontWeight": "800",
+                                    "marginBottom": "8px",
+                                    "letterSpacing": "-1px",
+                            },
+                            ),
+                        html.P(
+                            "Interactive Retail Analytics & Customer Intelligence",
+                            style={
+                                "fontSize": "17px",
+                                "color": "#e2eaff",
+                                "marginBottom": "18px",
+                            },
+                        ),
+                        html.P(
+                            "Powered by the UCI Online Retail dataset | "
+                            "December 2010 - December 2011 | Currency: GBP (£)",
+                            style={"fontSize": "13px"},
+                        ),
+                        html.P(
+                            "Revenue represents gross sales from positive-quantity, "
+                            "positive-price transactions; returns are not deducted.",
+                            style={"fontSize": "12px"},
+                        ),
+                    ],
+                ),
+
+        
+html.Div(
+    style={
+        "display": "grid",
+        "gridTemplateColumns": "repeat(auto-fit, minmax(190px, 1fr))",
+        "gap": "16px",
+        "marginBottom": "24px",
+    },
+    children=[
+                html.Div(
+            [
+                html.P(
+                    "Gross Sales Revenue",
+                    className="kpi-label",
+                ),
+                html.H2(
+                    f"£{total_revenue:,.2f}",
+                    id="gross-revenue-value",
+                    style={
+                        "fontSize": "clamp(18px, 1.5vw, 24px)",
+                        "whiteSpace": "nowrap",
+                        "letterSpacing": "-0.5px",
+                        "overflow": "hidden",
+                        "textOverflow": "ellipsis",
+                    },
+                ),
+            ],
+            className="kpi-card",
+        ),
+        html.Div(
+            [
+                html.P(
+                    "Unique Orders",
+                    className="kpi-label",
+                ),
+                html.H2(
+                    f"{total_orders:,}",
+                    id="unique-orders-value",
+                ),
+            ],
+            className="kpi-card",
+        ),
+        html.Div(
+            [
+                html.P(
+                    "Average Order Value",
+                    className="kpi-label",
+                ),
+                html.H2(
+                    f"£{average_order_value:,.2f}",
+                    id="average-order-value",
+                ),
+            ],
+            className="kpi-card",
+        ),
+        html.Div(
+            [
+                html.P(
+                    "Monthly Revenue Growth",
+                    className="kpi-label",
+                ),
+                html.H3(
+                    id="monthly-growth-value",
+                    children="N/A",
+                    style={"margin": "0", "color": "#172033"},
+                ),
+                html.P(
+                    "Compared with the previous month",
+                    style={"fontSize": "12px", "color": "#64748b"},
+                ),
+            ],
+            className="kpi-card",
+        ),
+    ],
+),
+
 
         
         html.Div(
-            style={
-                "background": "white",
-                "padding": "22px",
-                "borderRadius": "14px",
-                "marginBottom": "24px",
-            },
+            className="saas-card",
+            style={"marginBottom": "24px"},
             children=[
                 html.Label(
                     "Filter by country:",
                     htmlFor="country-selector",
                     style={"fontWeight": "bold", "marginTop": "12px"},
                 ),
-                
                 html.Div(
                     style={
                         "display": "grid",
@@ -302,12 +415,8 @@ app.layout = html.Div(
        
         # Dataset Overview
         html.Div(
-            style={
-                "background": "white",
-                "padding": "22px",
-                "borderRadius": "14px",
-                "marginBottom": "24px",
-            },
+            className="saas-card",
+            style={"marginBottom": "24px"},
             children=[
                 html.H3(
                     "Dataset Overview",
@@ -359,12 +468,8 @@ app.layout = html.Div(
 
         # Transaction Quality Overview
         html.Div(
-            style={
-                "background": "white",
-                "padding": "22px",
-                "borderRadius": "14px",
-                "marginBottom": "24px",
-            },
+            className="saas-card",
+            style={"marginBottom": "24px"},
             children=[
                 html.H3(
                     "Transaction Quality Overview",
@@ -447,12 +552,8 @@ app.layout = html.Div(
         ),
         
         html.Div(
-            style={
-                "background": "white",
-                "padding": "22px",
-                "borderRadius": "14px",
-                "marginBottom": "24px",
-            },
+            className="saas-card",
+            style={"marginBottom": "24px"},
             children=[
                 html.H3(
                     "Business Insights",
@@ -585,63 +686,62 @@ app.layout = html.Div(
         ),
 
         html.Div(
-            style={
-                "background": "white",
-                "padding": "18px",
-                "borderRadius": "14px",
-            },
-            children=[
-                dcc.Graph(
-                    id="monthly-chart",
-                    config={"displayModeBar": True, "responsive": True},
-                ),
-                html.H3(
-                      "Top 10 Products by Revenue",
-                       style={"marginTop": "30px"},
+                className="saas-card",
+                children=[
+                    dcc.Graph(
+                        id="monthly-chart",
+                        config={"displayModeBar": True, "responsive": True},
                     ),
-                dcc.Graph(
-                    id="top-products-chart",
-                    figure=px.bar(
-                        top_products.sort_values("Revenue", ascending=True),
-                        x="Revenue",
-                        y="Product",
-                        orientation="h",
-                        title="Top 10 Products",
-                        labels={
-                            "Revenue": "Revenue (£)",
-                            "Product": "Product",
-                        },
-                        template=chart_template,
+                    html.H3(
+                        "Top 10 Products by Revenue",
+                        className="section-title",
+                        style={"marginTop": "30px"},
+                        ),
+                    dcc.Graph(
+                        id="top-products-chart",
+                        figure=px.bar(
+                            top_products.sort_values("Revenue", ascending=True),
+                            x="Revenue",
+                            y="Product",
+                            orientation="h",
+                            title="Top 10 Products",
+                            labels={
+                                "Revenue": "Revenue (£)",
+                                "Product": "Product",
+                            },
+                            template=chart_template,
+                        ),
                     ),
-                ),
-                html.H3(
-                    "Top 10 Countries by Revenue",
-                    style={"marginTop": "30px"},
-                ),
-                dcc.Graph(
-                    id="country-performance-chart",
-                ),
-                
-                html.H3(
-                    "Revenue Contribution by Country",
-                    style={"marginTop": "30px"},
-                ),
-                dcc.Graph(
-                    id="country-contribution-chart",
-                ),
+                    html.H3(
+                        "Top 10 Countries by Revenue",
+                        className="section-title",
+                        style={"marginTop": "30px"},
+                    ),
+                    dcc.Graph(
+                        id="country-performance-chart",
+                    ),
+                    
+                    html.H3(
+                        "Revenue Contribution by Country",
+                        className="section-title",
+                        style={"marginTop": "30px"},
+                    ),
+                    dcc.Graph(
+                        id="country-contribution-chart",
+                    ),
+                ],
+            ),
 
-
+                html.Footer(
+                    "RetailPulse AI | Portfolio project | Python, Pandas, Dash & Plotly",
+                    style={
+                        "textAlign": "center",
+                        "padding": "24px 0 0 0",
+                        "color": "#586174",
+                        "fontSize": "13px",
+                    },
+                ),
             ],
-        ),
-
-        html.Footer(
-            "RetailPulse AI | Portfolio project | Python, Pandas, Dash & Plotly",
-            style={
-                "textAlign": "center",
-                "padding": "24px 0 0 0",
-                "color": "#586174",
-                "fontSize": "13px",
-            },
         ),
     ],
 )
