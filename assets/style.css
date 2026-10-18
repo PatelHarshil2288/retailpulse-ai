@@ -822,3 +822,185 @@ footer {
         min-height: 120px;
     }
 }
+
+
+
+/* =========================================================
+   Design Milestone 4 — Filter and control styling
+   ========================================================= */
+
+/* Filter controls: consistent labels and spacing */
+#country-selector,
+#start-date,
+#end-date,
+#view-selector,
+#reset-filters,
+#export-csv-button {
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+#country-selector {
+    max-width: 100%;
+}
+
+#country-selector .Select-control {
+    min-height: 42px;
+    border-color: var(--rp-border-strong) !important;
+    border-radius: var(--rp-radius-sm) !important;
+    box-shadow: none !important;
+}
+
+#country-selector .Select-placeholder,
+#country-selector .Select-value-label {
+    line-height: 40px;
+    color: var(--rp-text);
+    font-size: 13px;
+}
+
+#country-selector .Select-control:hover {
+    border-color: var(--rp-blue) !important;
+}
+
+/* Date-picker containers */
+#start-date,
+#end-date {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+}
+
+#start-date .SingleDatePicker,
+#end-date .SingleDatePicker,
+#start-date .SingleDatePickerInput,
+#end-date .SingleDatePickerInput,
+#start-date .DateInput,
+#end-date .DateInput {
+    width: 100%;
+    max-width: 100%;
+}
+
+#start-date .SingleDatePickerInput,
+#end-date .SingleDatePickerInput {
+    min-height: 42px;
+    border: 1px solid var(--rp-border-strong) !important;
+    border-radius: var(--rp-radius-sm) !important;
+    background: var(--rp-surface) !important;
+}
+
+#start-date .DateInput_input,
+#end-date .DateInput_input {
+    min-height: 40px;
+    padding: 9px 10px !important;
+    color: var(--rp-text) !important;
+    font-size: 13px !important;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Metric selector */
+#view-selector {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+    margin-top: 12px;
+}
+
+#view-selector label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    padding: 9px 12px;
+    color: var(--rp-text-secondary);
+    background: var(--rp-surface-muted);
+    border: 1px solid var(--rp-border);
+    border-radius: var(--rp-radius-sm);
+    font-size: 13px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+#view-selector label:hover {
+    background: var(--rp-blue-soft);
+    border-color: #bfdbfe;
+}
+
+#view-selector input[type="radio"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--rp-blue);
+}
+
+/* Reset Filters button */
+#reset-filters {
+    min-height: 40px;
+    padding: 10px 17px !important;
+    color: #ffffff !important;
+    background: var(--rp-navy-light) !important;
+    border: 1px solid var(--rp-navy-light) !important;
+    border-radius: var(--rp-radius-sm) !important;
+    box-shadow: none !important;
+    font-size: 13px;
+    font-weight: 650 !important;
+    cursor: pointer;
+}
+
+#reset-filters:hover {
+    background: var(--rp-navy) !important;
+    border-color: var(--rp-navy) !important;
+}
+
+/* CSV export button */
+#export-csv-button {
+    min-height: 40px;
+    padding: 10px 17px !important;
+    color: #ffffff !important;
+    background: var(--rp-teal) !important;
+    border: 1px solid var(--rp-teal) !important;
+    border-radius: var(--rp-radius-sm) !important;
+    box-shadow: none !important;
+    font-size: 13px;
+    font-weight: 650 !important;
+    cursor: pointer;
+}
+
+#export-csv-button:hover {
+    background: #115e59 !important;
+    border-color: #115e59 !important;
+}
+
+/* Consistent keyboard focus for dashboard controls */
+#country-selector:focus-within .Select-control,
+#start-date:focus-within .SingleDatePickerInput,
+#end-date:focus-within .SingleDatePickerInput {
+    border-color: var(--rp-blue) !important;
+}
+
+/* Compact layout for smaller screens */
+@media (max-width: 600px) {
+    #view-selector {
+        gap: 8px;
+    }
+
+    #view-selector label {
+        padding: 8px 9px;
+        font-size: 12px;
+    }
+
+    #reset-filters,
+    #export-csv-button {
+        min-height: 40px;
+        margin-left: 0 !important;
+        margin-right: 8px;
+        margin-bottom: 12px !important;
+        padding: 9px 12px !important;
+        font-size: 12px;
+    }
+
+    #country-selector .Select-placeholder,
+    #country-selector .Select-value-label {
+        font-size: 12px;
+    }
+}
