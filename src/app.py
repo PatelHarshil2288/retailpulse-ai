@@ -134,6 +134,80 @@ best_month_revenue = (
 
 chart_template = "plotly_white"
 
+def apply_chart_theme(figure):
+    """Apply consistent styling to RetailPulse AI Plotly charts."""
+    chart_font = '"Inter", "Segoe UI", Arial, sans-serif'
+
+    figure.update_layout(
+        template=chart_template,
+        title={
+            "x": 0.02,
+            "xanchor": "left",
+            "font": {
+                "family": chart_font,
+                "size": 17,
+                "color": "#172033",
+            },
+        },
+        font={
+            "family": chart_font,
+            "size": 12,
+            "color": "#475569",
+        },
+        hoverlabel={
+            "bgcolor": "#14213d",
+            "bordercolor": "#203f72",
+            "font": {
+                "family": chart_font,
+                "size": 12,
+                "color": "#ffffff",
+            },
+            "align": "left",
+        },
+        legend={
+            "font": {
+                "family": chart_font,
+                "size": 11,
+                "color": "#475569",
+            },
+            "bgcolor": "rgba(255, 255, 255, 0)",
+            "borderwidth": 0,
+        },
+        margin={"l": 55, "r": 24, "t": 70, "b": 45},
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        hovermode="closest",
+    )
+
+    figure.update_xaxes(
+        showline=False,
+        zeroline=False,
+        tickfont={"family": chart_font, "size": 11, "color": "#64748b"},
+        title_font={"family": chart_font, "size": 12, "color": "#475569"},
+    )
+
+    figure.update_yaxes(
+        showline=False,
+        zeroline=False,
+        tickfont={"family": chart_font, "size": 11, "color": "#64748b"},
+        title_font={"family": chart_font, "size": 12, "color": "#475569"},
+    )
+
+    figure.update_traces(
+        hoverlabel={
+            "bgcolor": "#14213d",
+            "bordercolor": "#203f72",
+            "font": {
+                "family": chart_font,
+                "size": 12,
+                "color": "#ffffff",
+            },
+        }
+    )
+
+    return figure
+
+
 app = Dash(
     __name__,
     assets_folder="../assets",
@@ -1171,9 +1245,13 @@ def update_chart(
     uniformtext_mode="hide",
 )
 
+    # Apply consistent styling to all dashboard charts.
+    fig = apply_chart_theme(fig)
+    product_fig = apply_chart_theme(product_fig)
+    country_fig = apply_chart_theme(country_fig)
+    contribution_fig = apply_chart_theme(contribution_fig)
 
-
-    
+   
     
     return (
         fig,
@@ -1191,8 +1269,6 @@ def update_chart(
         f"Revenue: £{top_product_revenue:,.2f}",
         f"Revenue: £{best_month_revenue:,.2f}",
     )
-
-
 
 
 @app.callback(
