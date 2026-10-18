@@ -1,234 +1,519 @@
 
-/* ==========================================
-   RetailPulse AI — Modern SaaS Theme
-   ========================================== */
+/* =========================================================
+   RetailPulse AI — Modern Enterprise BI Design System
+   Milestone 1: Visual foundation only
+   ========================================================= */
 
 :root {
-    --navy-950: #101a33;
-    --navy-900: #172544;
-    --navy-800: #20365e;
-    --blue-600: #4169f5;
-    --blue-100: #e9efff;
-    --teal-500: #14b8a6;
-    --page-bg: #f3f6fc;
-    --card-bg: #ffffff;
-    --text-main: #172033;
-    --text-muted: #68758b;
-    --border-color: #e6ebf3;
-    --card-shadow: 0 6px 24px rgba(22, 39, 75, 0.06);
+    color-scheme: light;
+
+    --rp-navy: #14213d;
+    --rp-navy-light: #20365e;
+    --rp-blue: #2563eb;
+    --rp-blue-hover: #1d4ed8;
+    --rp-blue-soft: #eff6ff;
+    --rp-teal: #0f766e;
+
+    --rp-page: #f3f6fa;
+    --rp-surface: #ffffff;
+    --rp-surface-muted: #f8fafc;
+
+    --rp-text: #172033;
+    --rp-text-secondary: #64748b;
+    --rp-text-subtle: #94a3b8;
+
+    --rp-border: #dfe6ef;
+    --rp-border-strong: #cbd5e1;
+
+    --rp-radius-sm: 8px;
+    --rp-radius-md: 12px;
+    --rp-radius-lg: 16px;
+
+    --rp-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04),
+                      0 4px 12px rgba(15, 23, 42, 0.03);
+
+    --rp-shadow-hover: 0 4px 14px rgba(15, 23, 42, 0.07);
 }
 
-/* Base page */
+/* -------------------------
+   Global foundation
+   ------------------------- */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+    background: var(--rp-page);
+}
+
 body {
     margin: 0;
-    background: var(--page-bg);
-    color: var(--text-main);
+    min-height: 100vh;
+    background: var(--rp-page);
+    color: var(--rp-text);
     font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-/* Headings */
-h1, h2, h3, h4 {
-    color: var(--text-main);
-    letter-spacing: -0.035em;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--rp-text);
+    font-family: inherit;
+    letter-spacing: -0.025em;
 }
 
 h1 {
-    font-weight: 800;
+    font-size: clamp(26px, 2.4vw, 34px);
+    font-weight: 750;
+    line-height: 1.2;
 }
 
-h2, h3 {
+h2 {
     font-weight: 700;
 }
 
-/* Dashboard cards and panels */
+h3,
+h4 {
+    font-weight: 650;
+}
+
+p {
+    line-height: 1.55;
+}
+
+a {
+    color: var(--rp-blue);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+::selection {
+    background: #dbeafe;
+    color: var(--rp-navy);
+}
+
+/* -------------------------
+   Main workspace
+   ------------------------- */
+
+.main-content {
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    padding: 28px;
+    background: var(--rp-page);
+    color: var(--rp-text);
+}
+
+.main-content > * {
+    min-width: 0;
+}
+
+/* -------------------------
+   Sidebar
+   ------------------------- */
+
+.sidebar {
+    flex: 0 0 248px;
+    width: 248px;
+    min-width: 248px;
+    min-height: 100vh;
+    padding: 28px 18px;
+    background: var(--rp-navy);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar h1,
+.sidebar h2,
+.sidebar h3,
+.sidebar h4,
+.sidebar p {
+    color: inherit;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 10px 13px;
+    margin: 3px 0;
+    border: 1px solid transparent;
+    border-radius: var(--rp-radius-sm);
+    color: #d6e0f2;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: default;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.sidebar-item-active {
+    background: #294b86;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+/* -------------------------
+   Dashboard cards
+   ------------------------- */
+
 .saas-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 24px;
-    box-shadow: var(--card-shadow);
-    transition: transform 180ms ease, box-shadow 180ms ease;
+    min-width: 0;
+    padding: 22px !important;
+    background: var(--rp-surface) !important;
+    border: 1px solid var(--rp-border) !important;
+    border-radius: var(--rp-radius-lg) !important;
+    box-shadow: var(--rp-shadow-card) !important;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .saas-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(22, 39, 75, 0.09);
+    border-color: var(--rp-border-strong) !important;
+    box-shadow: var(--rp-shadow-hover) !important;
 }
 
-/* KPI cards */
 .kpi-card {
     position: relative;
+    min-width: 0;
     overflow: hidden;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 22px;
-    box-shadow: var(--card-shadow);
+    padding: 20px 20px 18px 22px !important;
+    background: var(--rp-surface) !important;
+    border: 1px solid var(--rp-border) !important;
+    border-radius: var(--rp-radius-md) !important;
+    box-shadow: var(--rp-shadow-card) !important;
 }
 
 .kpi-card::before {
-    content: "";
     position: absolute;
     top: 0;
+    bottom: 0;
     left: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--blue-600);
+    width: 3px;
+    background: var(--rp-blue);
+    content: "";
+}
+
+.kpi-card p {
+    line-height: 1.45;
+}
+
+.kpi-card .kpi-label {
+    margin: 0 0 10px;
+    color: var(--rp-text-secondary);
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
 }
 
 .kpi-card h2,
 .kpi-card h3 {
-    margin-bottom: 0;
-    font-variant-numeric: tabular-nums;
-}
-
-.kpi-label {
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 600;
+    max-width: 100%;
     margin-top: 0;
+    margin-bottom: 0;
+    color: var(--rp-text);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
 }
 
-/* Section headings */
+.kpi-card h2 {
+    font-size: clamp(21px, 1.8vw, 29px);
+    line-height: 1.25;
+}
+
+.kpi-card h3 {
+    font-size: clamp(20px, 1.7vw, 27px);
+    line-height: 1.3;
+}
+
+.kpi-card p:last-child {
+    margin-bottom: 0;
+}
+
+/* -------------------------
+   Section headings
+   ------------------------- */
+
 .section-title {
-    font-size: 21px;
-    font-weight: 750;
-    margin: 0 0 6px;
+    margin: 0 0 8px;
+    color: var(--rp-text);
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
 }
 
 .section-description {
-    color: var(--text-muted);
+    margin: 0 0 16px;
+    color: var(--rp-text-secondary);
     font-size: 13px;
     line-height: 1.6;
-    margin-top: 0;
 }
 
-/* Buttons */
+/* Dashboard headings inside panels */
+.saas-card h3 {
+    line-height: 1.4;
+}
+
+.saas-card > p {
+    color: var(--rp-text-secondary);
+}
+
+/* -------------------------
+   Buttons
+   ------------------------- */
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
 button {
-    font-family: inherit;
-    font-weight: 650;
-    transition: transform 150ms ease, filter 150ms ease;
+    min-height: 38px;
+    border-radius: var(--rp-radius-sm);
+    font-weight: 600;
+    transition: background-color 150ms ease,
+                border-color 150ms ease,
+                box-shadow 150ms ease;
 }
 
 button:hover {
-    filter: brightness(1.05);
-    transform: translateY(-1px);
+    filter: none;
+    transform: none;
 }
 
-button:focus-visible {
-    outline: 3px solid rgba(65, 105, 245, 0.35);
-    outline-offset: 3px;
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.28);
+    outline-offset: 2px;
 }
 
-/* Dropdowns and date controls */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* -------------------------
+   Dash dropdown controls
+   ------------------------- */
+
 .Select-control,
+.Select-menu-outer,
+.Select-value,
+.Select-placeholder,
+.Select-input,
+.Select-option,
+.VirtualizedSelectOption {
+    font-family: inherit;
+}
+
+.Select-control,
+.Select--single > .Select-control {
+    min-height: 40px;
+    background: var(--rp-surface) !important;
+    border: 1px solid var(--rp-border-strong) !important;
+    border-radius: var(--rp-radius-sm) !important;
+    box-shadow: none !important;
+}
+
+.Select-control:hover {
+    border-color: #94a3b8 !important;
+}
+
+.Select.is-focused:not(.is-open) > .Select-control {
+    border-color: var(--rp-blue) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+}
+
+.Select-menu-outer {
+    z-index: 1000;
+    border: 1px solid var(--rp-border) !important;
+    border-radius: var(--rp-radius-sm) !important;
+    box-shadow: var(--rp-shadow-hover) !important;
+}
+
+.Select-option {
+    padding: 10px 12px;
+}
+
+.Select-option.is-focused {
+    background: var(--rp-blue-soft);
+}
+
+.Select-option.is-selected {
+    background: var(--rp-blue);
+    color: #ffffff;
+}
+
+/* -------------------------
+   Date picker
+   ------------------------- */
+
+.DateInput,
 .DateInput_input,
 .SingleDatePickerInput {
-    border-radius: 10px !important;
-    border-color: var(--border-color) !important;
+    background: var(--rp-surface) !important;
+    border-radius: var(--rp-radius-sm) !important;
+}
+
+.SingleDatePickerInput {
+    border: 1px solid var(--rp-border-strong) !important;
+    overflow: hidden;
 }
 
 .DateInput_input {
+    min-height: 38px;
+    padding: 8px 10px !important;
+    color: var(--rp-text) !important;
     font-family: inherit !important;
-    font-size: 14px !important;
-    padding: 10px !important;
+    font-size: 13px !important;
+    line-height: 1.4;
+    border: 0 !important;
 }
 
-/* Plotly chart containers */
-.js-plotly-plot {
+.DateInput_input__focused {
+    border-bottom: 2px solid var(--rp-blue) !important;
+}
+
+/* -------------------------
+   Radio items and labels
+   ------------------------- */
+
+label {
+    color: var(--rp-text);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: var(--rp-blue);
+}
+
+#view-selector label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+    color: var(--rp-text-secondary);
+    font-weight: 500;
+}
+
+/* -------------------------
+   Plotly charts
+   ------------------------- */
+
+.dash-graph,
+.js-plotly-plot,
+.js-plotly-plot .plot-container,
+.js-plotly-plot .svg-container {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .js-plotly-plot .plotly .modebar {
-    opacity: 0.45;
+    opacity: 0.5;
 }
 
 .js-plotly-plot .plotly .modebar:hover {
     opacity: 1;
 }
 
-/* Footer */
-footer {
-    color: var(--text-muted);
+.js-plotly-plot .main-svg {
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+.js-plotly-plot .gtitle {
+    font-weight: 650;
+}
+
+/* -------------------------
+   Tables and data content
+   ------------------------- */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rp-border);
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background: var(--rp-surface-muted);
+    color: var(--rp-text-secondary);
     font-size: 12px;
+    font-weight: 700;
 }
 
-/* Small-screen adjustments */
-@media (max-width: 700px) {
-    .saas-card,
-    .kpi-card {
-        padding: 16px;
-        border-radius: 14px;
+/* -------------------------
+   Footer
+   ------------------------- */
+
+footer {
+    color: var(--rp-text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* -------------------------
+   Responsive layout
+   ------------------------- */
+
+@media (max-width: 1100px) {
+    .main-content {
+        padding: 22px;
     }
 
-    h1 {
-        font-size: 26px;
+    .sidebar {
+        flex-basis: 220px;
+        width: 220px;
+        min-width: 220px;
+        padding: 24px 14px;
     }
-
-    .section-title {
-        font-size: 19px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        transition-duration: 0.01ms !important;
-        animation-duration: 0.01ms !important;
-    }
-}
-
-
-
-/* ==========================================
-   RetailPulse AI — Sidebar Layout
-   ========================================== */
-
-.sidebar {
-    width: 248px;
-    min-width: 248px;
-    min-height: 100vh;
-    box-sizing: border-box;
-    padding: 30px 20px;
-    background: #14213d;
-    color: #ffffff;
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-item {
-    padding: 12px 14px;
-    margin: 5px 0;
-    border-radius: 10px;
-    color: #d3def5;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: default;
-}
-
-.sidebar-item-active {
-    background: #4169f5;
-    color: #ffffff;
-}
-
-.main-content {
-    flex: 1;
-    min-width: 0;
-    padding: 28px;
-    box-sizing: border-box;
 }
 
 @media (max-width: 800px) {
-    .sidebar {
-        width: 190px;
-        min-width: 190px;
-        padding: 24px 12px;
-    }
-
     .main-content {
         padding: 18px;
+    }
+
+    .sidebar {
+        flex-basis: 190px;
+        width: 190px;
+        min-width: 190px;
+        padding: 20px 12px;
+    }
+
+    .saas-card {
+        padding: 18px !important;
+    }
+
+    .kpi-card {
+        padding: 17px 16px 16px 19px !important;
     }
 }
 
@@ -238,6 +523,66 @@ footer {
     }
 
     .main-content {
+        width: 100%;
         padding: 14px;
+    }
+
+    .saas-card {
+        padding: 15px !important;
+        border-radius: var(--rp-radius-md) !important;
+    }
+
+    .kpi-card {
+        padding: 16px 14px 15px 17px !important;
+        border-radius: var(--rp-radius-md) !important;
+    }
+
+    .kpi-card h2 {
+        font-size: clamp(19px, 5vw, 24px);
+    }
+
+    .kpi-card h3 {
+        font-size: clamp(19px, 5vw, 23px);
+    }
+
+    .section-title {
+        font-size: 17px;
+    }
+
+    .DateInput,
+    .SingleDatePicker,
+    .SingleDatePickerInput {
+        max-width: 100%;
+    }
+
+    .DateInput_input {
+        width: 100%;
+        font-size: 12px !important;
+    }
+
+    #view-selector {
+        gap: 8px !important;
+    }
+
+    #view-selector label {
+        margin-bottom: 8px;
+    }
+
+    footer {
+        overflow-wrap: anywhere;
+    }
+}
+
+/* -------------------------
+   Accessibility
+   ------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
     }
 }
