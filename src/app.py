@@ -283,82 +283,84 @@ app.layout = html.Div(
 
 
         
-html.Div(
-    style={
-        "display": "grid",
-        "gridTemplateColumns": "repeat(auto-fit, minmax(190px, 1fr))",
-        "gap": "16px",
-        "marginBottom": "24px",
-    },
-    children=[
+
                 html.Div(
-            [
-                html.P(
-                    "Gross Sales Revenue",
-                    className="kpi-label",
+                    className="kpi-grid",
+                    children=[
+                        html.Div(
+                            className="kpi-card kpi-card-revenue",
+                            children=[
+                                html.P(
+                                    "Gross Sales Revenue",
+                                    className="kpi-label",
+                                ),
+                                html.H2(
+                                    f"£{total_revenue:,.2f}",
+                                    id="gross-revenue-value",
+                                    className="kpi-value",
+                                ),
+                                html.P(
+                                    "Total gross sales",
+                                    className="kpi-description",
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            className="kpi-card",
+                            children=[
+                                html.P(
+                                    "Unique Orders",
+                                    className="kpi-label",
+                                ),
+                                html.H2(
+                                    f"{total_orders:,}",
+                                    id="unique-orders-value",
+                                    className="kpi-value",
+                                ),
+                                html.P(
+                                    "Distinct sales invoices",
+                                    className="kpi-description",
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            className="kpi-card",
+                            children=[
+                                html.P(
+                                    "Average Order Value",
+                                    className="kpi-label",
+                                ),
+                                html.H2(
+                                    f"£{average_order_value:,.2f}",
+                                    id="average-order-value",
+                                    className="kpi-value",
+                                ),
+                                html.P(
+                                    "Revenue per unique order",
+                                    className="kpi-description",
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            className="kpi-card kpi-card-growth",
+                            children=[
+                                html.P(
+                                    "Monthly Revenue Growth",
+                                    className="kpi-label",
+                                ),
+                                html.H2(
+                                    id="monthly-growth-value",
+                                    children="N/A",
+                                    className="kpi-value",
+                                ),
+                                html.P(
+                                    "Compared with the previous month",
+                                    className="kpi-description",
+                                ),
+                            ],
+                        ),
+                    ],
                 ),
-                html.H2(
-                    f"£{total_revenue:,.2f}",
-                    id="gross-revenue-value",
-                    style={
-                        "fontSize": "clamp(18px, 1.5vw, 24px)",
-                        "whiteSpace": "nowrap",
-                        "letterSpacing": "-0.5px",
-                        "overflow": "hidden",
-                        "textOverflow": "ellipsis",
-                    },
-                ),
-            ],
-            className="kpi-card",
-        ),
-        html.Div(
-            [
-                html.P(
-                    "Unique Orders",
-                    className="kpi-label",
-                ),
-                html.H2(
-                    f"{total_orders:,}",
-                    id="unique-orders-value",
-                ),
-            ],
-            className="kpi-card",
-        ),
-        html.Div(
-            [
-                html.P(
-                    "Average Order Value",
-                    className="kpi-label",
-                ),
-                html.H2(
-                    f"£{average_order_value:,.2f}",
-                    id="average-order-value",
-                ),
-            ],
-            className="kpi-card",
-        ),
-        html.Div(
-            [
-                html.P(
-                    "Monthly Revenue Growth",
-                    className="kpi-label",
-                ),
-                html.H3(
-                    id="monthly-growth-value",
-                    children="N/A",
-                    style={"margin": "0", "color": "#172033"},
-                ),
-                html.P(
-                    "Compared with the previous month",
-                    style={"fontSize": "12px", "color": "#64748b"},
-                ),
-            ],
-            className="kpi-card",
-        ),
-    ],
-),
-
-
         
         html.Div(
             className="saas-card",

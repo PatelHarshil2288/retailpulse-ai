@@ -700,3 +700,125 @@ footer {
         font-size: 11px;
     }
 }
+
+
+
+/* =========================================================
+   Design Milestone 3 — Executive KPI cards
+   ========================================================= */
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+    align-items: stretch;
+}
+
+.kpi-grid .kpi-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 148px;
+    padding: 21px 18px 18px 21px !important;
+    background: var(--rp-surface) !important;
+    border: 1px solid var(--rp-border) !important;
+    border-radius: var(--rp-radius-md) !important;
+    box-shadow: var(--rp-shadow-card) !important;
+    transition: border-color 160ms ease, box-shadow 160ms ease,
+                transform 160ms ease;
+}
+
+.kpi-grid .kpi-card:hover {
+    border-color: #cbd5e1 !important;
+    box-shadow: var(--rp-shadow-hover) !important;
+    transform: translateY(-2px);
+}
+
+.kpi-grid .kpi-label {
+    margin: 0 0 12px;
+    color: var(--rp-text-secondary);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+}
+
+.kpi-grid .kpi-value {
+    margin: 0;
+    color: var(--rp-text);
+    font-size: clamp(22px, 1.8vw, 29px);
+    font-weight: 750;
+    line-height: 1.3;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.kpi-grid .kpi-description {
+    margin: auto 0 0;
+    padding-top: 12px;
+    color: var(--rp-text-secondary);
+    font-size: 11px;
+    font-weight: 450;
+    line-height: 1.5;
+}
+
+.kpi-grid .kpi-card-revenue {
+    border-top: 3px solid var(--rp-blue) !important;
+}
+
+.kpi-grid .kpi-card-growth {
+    border-top: 3px solid var(--rp-teal) !important;
+}
+
+@media (max-width: 1100px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .kpi-grid .kpi-card {
+        min-height: 140px;
+    }
+}
+
+@media (max-width: 600px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .kpi-grid .kpi-card {
+        min-height: 135px;
+        padding: 16px 12px 14px 15px !important;
+        border-radius: 11px !important;
+    }
+
+    .kpi-grid .kpi-label {
+        margin-bottom: 10px;
+        font-size: 11px;
+    }
+
+    .kpi-grid .kpi-value {
+        font-size: clamp(18px, 5vw, 23px);
+        letter-spacing: -0.025em;
+    }
+
+    .kpi-grid .kpi-description {
+        padding-top: 10px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 350px) {
+    .kpi-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .kpi-grid .kpi-card {
+        min-height: 120px;
+    }
+}
