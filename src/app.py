@@ -244,47 +244,43 @@ app.layout = html.Div(
         ),
         html.Div(
             className="main-content",
-            children=[
+            children=[                
                 html.Div(
-                    style={
-                        "background": "linear-gradient(120deg, #14213d, #2457a7)",
-                        "padding": "28px",
-                        "borderRadius": "18px",
-                        "color": "white",
-                        "marginBottom": "24px",
-                        "boxShadow": "0 12px 30px rgba(23, 37, 68, 0.18)",
-                        "border": "1px solid rgba(255, 255, 255, 0.12)",
-                    },
+                    className="dashboard-hero",
                     children=[
-                        html.H1("RetailPulse AI - Retail Analytics",
-                                style={
-                                    "color": "white",
-                                    "fontSize": "34px",
-                                    "fontWeight": "800",
-                                    "marginBottom": "8px",
-                                    "letterSpacing": "-1px",
-                            },
-                            ),
-                        html.P(
-                            "Interactive Retail Analytics & Customer Intelligence",
-                            style={
-                                "fontSize": "17px",
-                                "color": "#e2eaff",
-                                "marginBottom": "18px",
-                            },
-                        ),
-                        html.P(
-                            "Powered by the UCI Online Retail dataset | "
-                            "December 2010 - December 2011 | Currency: GBP (£)",
-                            style={"fontSize": "13px"},
-                        ),
-                        html.P(
-                            "Revenue represents gross sales from positive-quantity, "
-                            "positive-price transactions; returns are not deducted.",
-                            style={"fontSize": "12px"},
+                        html.Div(
+                            className="dashboard-hero-copy",
+                            children=[
+                                html.P(
+                                    "EXECUTIVE OVERVIEW",
+                                    className="dashboard-hero-eyebrow",
+                                ),
+                                html.H1(
+                                    "RetailPulse AI",
+                                    className="dashboard-hero-title",
+                                ),
+                                html.P(
+                                    "Retail performance, revenue trends, and "
+                                    "customer intelligence in one view.",
+                                    className="dashboard-hero-subtitle",
+                                ),
+                                html.P(
+                                    "UCI Online Retail  |  "
+                                    "December 2010 – December 2011  |  "
+                                    "Currency: GBP (£)",
+                                    className="dashboard-hero-meta",
+                                ),
+                                html.P(
+                                    "Revenue represents gross sales from "
+                                    "positive-quantity, positive-price "
+                                    "transactions; returns are not deducted.",
+                                    className="dashboard-hero-note",
+                                ),
+                            ],
                         ),
                     ],
                 ),
+
 
         
 html.Div(

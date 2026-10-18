@@ -586,3 +586,117 @@ footer {
         animation-duration: 0.01ms !important;
     }
 }
+
+
+
+/* =========================================================
+   Design Milestone 2 — Executive Overview hero
+   ========================================================= */
+
+.dashboard-hero {
+    position: relative;
+    isolation: isolate;
+    min-width: 0;
+    overflow: hidden;
+    margin-bottom: 24px;
+    padding: 30px 32px;
+    color: #ffffff;
+    background:
+        radial-gradient(
+            circle at 90% 10%,
+            rgba(96, 165, 250, 0.24),
+            transparent 32%
+        ),
+        linear-gradient(120deg, #14213d 0%, #203f72 58%, #2457a7 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(20, 33, 61, 0.14);
+}
+
+.dashboard-hero-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+}
+
+.dashboard-hero .dashboard-hero-eyebrow {
+    margin: 0 0 12px;
+    color: #bfdbfe;
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.16em;
+    line-height: 1.5;
+}
+
+.dashboard-hero .dashboard-hero-title {
+    margin: 0 0 10px;
+    color: #ffffff;
+    font-size: clamp(28px, 3vw, 38px);
+    font-weight: 750;
+    line-height: 1.18;
+    letter-spacing: -0.035em;
+}
+
+.dashboard-hero .dashboard-hero-subtitle {
+    max-width: 700px;
+    margin: 0 0 20px;
+    color: #e5edff;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.65;
+}
+
+.dashboard-hero .dashboard-hero-meta {
+    margin: 0 0 10px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-hero .dashboard-hero-note {
+    max-width: 800px;
+    margin: 0;
+    color: #d4e0f5;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* Header responsiveness */
+@media (max-width: 800px) {
+    .dashboard-hero {
+        padding: 25px 24px;
+    }
+
+    .dashboard-hero .dashboard-hero-subtitle {
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 600px) {
+    .dashboard-hero {
+        padding: 22px 18px;
+        margin-bottom: 18px;
+        border-radius: 13px;
+    }
+
+    .dashboard-hero .dashboard-hero-eyebrow {
+        font-size: 10px;
+        margin-bottom: 9px;
+    }
+
+    .dashboard-hero .dashboard-hero-title {
+        font-size: 28px;
+    }
+
+    .dashboard-hero .dashboard-hero-subtitle {
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-hero .dashboard-hero-meta,
+    .dashboard-hero .dashboard-hero-note {
+        font-size: 11px;
+    }
+}
