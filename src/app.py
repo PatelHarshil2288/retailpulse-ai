@@ -9,6 +9,12 @@ from src.revenue_forecasting import (
     evaluate_forecasting_models,
 )
 
+from src.customer_segmentation import (
+    build_rfm_features_from_csv,
+    prepare_rfm_features,
+    fit_customer_segments,
+)
+
 # --------------------------------------------------
 # RetailPulse AI - Real Retail Analytics Dashboard
 # Dataset: UCI Online Retail
@@ -211,6 +217,75 @@ def apply_chart_theme(figure):
     return figure
 
 
+# --------------------------------------------------
+# Historical customer segmentation (RFM + K-Means)
+# --------------------------------------------------
+
+rfm_features = build_rfm_features_from_csv(SALES_FILE)
+scaled_rfm, rfm_scaler = prepare_rfm_features(rfm_features)
+
+# Use the previously validated two-cluster solution.
+customer_assignments, _, customer_segmentation_model = (
+    fit_customer_segments(scaled_rfm, n_clusters=2)
+)
+
+# Build interpretable segment profiles from original, unscaled RFM values.
+customer_segment_data = rfm_features.join(customer_assignments["Cluster"])
+
+customer_segment_profiles = (
+    customer_segment_data.groupby("Cluster")
+    .agg(
+        CustomerCount=("Recency", "size"),
+        MedianRecency=("Recency", "median"),
+        MedianFrequency=("Frequency", "median"),
+        MedianMonetary=("Monetary", "median"),
+        MeanRecency=("Recency", "mean"),
+        MeanFrequency=("Frequency", "mean"),
+        MeanMonetary=("Monetary", "mean"),
+    )
+    .reset_index()
+)
+
+customer_segment_profiles["CustomerPercentage"] = (
+    customer_segment_profiles["CustomerCount"]
+    / customer_segment_profiles["CustomerCount"].sum()
+    * 100
+)
+
+
+customer_segment_profile_components = []
+
+for _, row in customer_segment_profiles.iterrows():
+    cluster_id = int(row["Cluster"])
+
+    if cluster_id == 0:
+        segment_name = "Recent, frequent, higher-spending"
+    else:
+        segment_name = "Less recent, less frequent"
+
+    customer_segment_profile_components.append(
+        html.Div(
+            className="saas-card",
+            style={"marginBottom": "12px"},
+            children=[
+                html.H4(segment_name),
+                html.P(
+                    f"{int(row['CustomerCount']):,} customers "
+                    f"({row['CustomerPercentage']:.1f}%)"
+                ),
+                html.P(
+                    f"Median recency: {row['MedianRecency']:.0f} days | "
+                    f"Median purchases: {row['MedianFrequency']:.0f} invoices"
+                ),
+                html.P(
+                    f"Median monetary value: £{row['MedianMonetary']:,.2f}",
+                    style={"color": "#64748b"},
+                ),
+            ],
+        )
+    )
+
+
 app = Dash(
     __name__,
     assets_folder="../assets",
@@ -321,7 +396,7 @@ app.layout = html.Div(
         ),
         html.Div(
             className="main-content",
-            children=[                
+            children=[
                 html.Div(
                     className="dashboard-hero",
                     children=[
@@ -359,7 +434,7 @@ app.layout = html.Div(
                 ),
 
 
-        
+
 
                 html.Div(
                     className="kpi-grid",
@@ -438,7 +513,7 @@ app.layout = html.Div(
                         ),
                     ],
                 ),
-        
+
         html.Div(
             className="saas-card",
             style={"marginBottom": "24px"},
@@ -486,8 +561,8 @@ app.layout = html.Div(
                     ],
                 ),
 
-                
-       
+
+
         # Dataset Overview
         html.Div(
             className="saas-card",
@@ -625,7 +700,7 @@ app.layout = html.Div(
                 ),
             ],
         ),
-        
+
         html.Div(
             className="saas-card",
             style={"marginBottom": "24px"},
@@ -698,7 +773,7 @@ app.layout = html.Div(
                     clearable=False,
                     style={"marginTop": "10px", "marginBottom": "20px"},
                 ),
-                
+
                 html.Button(
                     "Reset Filters",
                     id="reset-filters",
@@ -714,7 +789,7 @@ app.layout = html.Div(
                         "marginBottom": "20px",
                     },
                 ),
-                
+
                 html.Button(
                     "Export Filtered Data (CSV)",
                     id="export-csv-button",
@@ -795,7 +870,7 @@ app.layout = html.Div(
                     dcc.Graph(
                         id="country-performance-chart",
                     ),
-                    
+
                     html.H3(
                         "Revenue Contribution by Country",
                         className="section-title",
@@ -806,7 +881,7 @@ app.layout = html.Div(
                     ),
                 ],
             ),
-                
+
             # Experimental revenue forecasting
             html.Div(
                 className="saas-card",
@@ -838,9 +913,60 @@ app.layout = html.Div(
                             "responsive": True,
                         },
                     ),
+
                 ],
             ),
-
+            # Historical customer segmentation
+            html.Div(
+                className="saas-card",
+                style={"marginTop": "24px"},
+                children=[
+                    html.H3(
+                        "Customer Segmentation",
+                        className="section-title",
+                    ),
+                    html.P(
+                        "Historical RFM segmentation using customer "
+                        "purchase recency, invoice frequency, and total "
+                        "monetary value. Based on transactions ending "
+                        "9 December 2011; this is not a forecast.",
+                        style={"color": "#64748b"},
+                    ),
+                    dcc.Graph(
+                        id="customer-segment-chart",
+                        figure=px.bar(
+                            customer_segment_profiles.assign(
+                                Segment=customer_segment_profiles[
+                                    "Cluster"
+                                ].map({
+                                    0: "Recent, frequent, higher-spending",
+                                    1: "Less recent, less frequent",
+                                })
+                            ),
+                            x="Segment",
+                            y="CustomerCount",
+                            color="Segment",
+                            text="CustomerCount",
+                            title="Customers by Segment",
+                            labels={
+                                "Segment": "Customer segment",
+                                "CustomerCount": "Number of customers",
+                            },
+                            template=chart_template,
+                        ),
+                        config={
+                            "displayModeBar": True,
+                            "responsive": True,
+                        },
+                    ),
+                    html.H3(
+                        "Segment Profiles",
+                        className="section-title",
+                        style={"marginTop": "24px"},
+                    ),
+                    *customer_segment_profile_components,
+                ],
+            ),
 
                 html.Footer(
                     "RetailPulse AI | Portfolio project | Python, Pandas, Dash & Plotly",
@@ -909,7 +1035,7 @@ def update_chart(
     orders = filtered_sales["InvoiceNo"].nunique()
     average_value = revenue / orders if orders else 0
 
-    
+
     # Calculate Business Insights for the selected filters.
     country_revenue = (
         filtered_sales.groupby("Country")["Revenue"]
@@ -947,15 +1073,15 @@ def update_chart(
     )
 
     monthly_revenue = (
-        filtered_sales.assign(
-            Month=filtered_sales["InvoiceDate"]
+        filtered_sales.groupby(
+            filtered_sales["InvoiceDate"]
             .dt.to_period("M")
             .dt.to_timestamp()
-        )
-        .groupby("Month")["Revenue"]
+        )["Revenue"]
         .sum()
         .sort_index()
     )
+
 
     best_month = (
         monthly_revenue.idxmax().strftime("%B %Y")
@@ -970,18 +1096,19 @@ def update_chart(
     )
 
 
-    # Aggregate monthly results.
+    # Aggregate monthly results without creating an intermediate DataFrame.
     monthly_filtered = (
-        filtered_sales.assign(
-            Month=filtered_sales["InvoiceDate"]
+        filtered_sales.groupby(
+            filtered_sales["InvoiceDate"]
             .dt.to_period("M")
             .dt.to_timestamp()
         )
-        .groupby("Month", as_index=False)
         .agg(
             Revenue=("Revenue", "sum"),
             Orders=("InvoiceNo", "nunique"),
         )
+        .rename_axis("Month")
+        .reset_index()
         .sort_values("Month")
     )
 
@@ -1076,7 +1203,7 @@ def update_chart(
         font={"family": "Arial, sans-serif", "color": "#172033"},
     )
 
-    
+
     # Prepare top 10 products for the selected country and date range.
     products_filtered = (
         filtered_sales.groupby("Product", as_index=False)
@@ -1089,7 +1216,7 @@ def update_chart(
         .sort_values("Revenue", ascending=True)
     )
 
-   
+
     # Top 10 products chart with an empty state.
     if products_filtered.empty or products_filtered["Revenue"].sum() <= 0:
         product_fig = px.bar(
@@ -1136,10 +1263,10 @@ def update_chart(
         yaxis={"categoryorder": "total ascending"},
     )
 
-    
+
     # Compare countries using the selected date range.
     # Ignore the country selector here so all countries remain comparable.
-    country_sales = sales.copy()
+    country_sales = sales
 
     if start_date:
         country_sales = country_sales.loc[
@@ -1152,7 +1279,7 @@ def update_chart(
             country_sales["InvoiceDate"] < end_exclusive
         ]
 
-    
+
     country_performance = (
         country_sales.groupby("Country", as_index=False)
         .agg(Revenue=("Revenue", "sum"))
@@ -1161,7 +1288,7 @@ def update_chart(
         .sort_values("Revenue", ascending=True)
     )
 
-    
+
     if country_performance.empty or country_performance["Revenue"].sum() <= 0:
         country_fig = px.bar(
             title="No country revenue available for this date range",
@@ -1206,10 +1333,10 @@ def update_chart(
         gridcolor="#e9edf5",
         rangemode="tozero",
     )
-    
+
     # Calculate each country's share of total revenue
     # for the selected date range.
-    
+
     country_contribution = (
         country_sales.groupby("Country", as_index=False)
         .agg(Revenue=("Revenue", "sum"))
@@ -1252,7 +1379,7 @@ def update_chart(
                 "<extra></extra>"
             ),
         )
-    
+
     else:
         contribution_fig = px.pie(
             title="No revenue contribution available for this date range",
@@ -1289,8 +1416,8 @@ def update_chart(
     country_fig = apply_chart_theme(country_fig)
     contribution_fig = apply_chart_theme(contribution_fig)
 
-   
-    
+
+
     return (
         fig,
         f"£{revenue:,.2f}",
@@ -1392,36 +1519,34 @@ def export_filtered_csv(n_clicks, selected_country, start_date, end_date):
 )
 def update_revenue_forecast(selected_country, start_date, end_date):
     """Update the experimental forecast for the selected data filters."""
-    filtered_sales = sales.copy()
+
+
+
+    # Build filters without modifying the shared sales DataFrame.
+    mask = pd.Series(True, index=sales.index)
 
     if selected_country != "All":
-        filtered_sales = filtered_sales.loc[
-            filtered_sales["Country"] == selected_country
-        ]
+        mask &= sales["Country"].eq(selected_country)
 
     if start_date:
-        filtered_sales = filtered_sales.loc[
-            filtered_sales["InvoiceDate"] >= pd.Timestamp(start_date)
-        ]
+        mask &= sales["InvoiceDate"] >= pd.Timestamp(start_date)
 
     if end_date:
-        filtered_sales = filtered_sales.loc[
-            filtered_sales["InvoiceDate"]
-            < pd.Timestamp(end_date) + pd.Timedelta(days=1)
-        ]
+        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        mask &= sales["InvoiceDate"] < end_exclusive
 
-    filtered_sales = filtered_sales.copy()
-    filtered_sales["Month"] = (
-        filtered_sales["InvoiceDate"]
-        .dt.to_period("M")
-        .dt.to_timestamp()
-    )
+    # Keep only the two columns required for forecasting.
+    forecast_data = sales.loc[mask, ["InvoiceDate", "Revenue"]]
 
+    # Aggregate revenue by month without adding a column to sales.
     monthly_revenue = (
-        filtered_sales.groupby("Month")["Revenue"]
+        forecast_data.groupby(
+            forecast_data["InvoiceDate"].dt.to_period("M").dt.to_timestamp()
+        )["Revenue"]
         .sum()
         .sort_index()
     )
+
 
     # Require sufficient, consecutive monthly history.
     if len(monthly_revenue) < 6:
