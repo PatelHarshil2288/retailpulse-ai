@@ -233,3 +233,62 @@ def test_csv_export_returns_download_data(monkeypatch):
     assert "InvoiceNo" in result["content"]
     assert "536365" in result["content"]
     assert "536366" in result["content"]
+
+
+
+def test_revenue_forecast_chart_exists_in_layout():
+    """Verify that the forecast chart and model summary are in the layout."""
+    from src.app import app
+
+    layout_text = str(app.layout)
+
+    assert "revenue-forecast-chart" in layout_text
+    assert "forecast-model-summary" in layout_text
+    assert "Revenue Forecast" in layout_text
+
+
+def test_revenue_forecast_callback_is_registered():
+    """Verify that the forecast has its own independent callback."""
+    from src.app import app
+
+    callback_keys = list(app.callback_map.keys())
+    callback_text = " ".join(callback_keys)
+
+    assert "revenue-forecast-chart.figure" in callback_text
+    assert "forecast-model-summary.children" in callback_text
+
+
+def test_revenue_forecast_callback_returns_valid_figure():
+    """Verify that the forecast callback returns a chart and model summary."""
+    from src.app import app, update_revenue_forecast
+
+    figure, summary = update_revenue_forecast("All", None, None)
+
+    assert hasattr(figure, "to_dict")
+    assert "Selected model:" in summary
+    assert "Backtesting MAE:" in summary
+
+    figure_data = figure.to_dict()["data"]
+
+    assert len(figure_data) >= 2
+    assert any(
+        trace.get("name") == "Forecast revenue"
+        for trace in figure_data
+    )
+
+
+def test_revenue_forecast_handles_short_date_range():
+    """Verify that short date selections produce a helpful empty state."""
+    from src.app import update_revenue_forecast
+
+    from src.app import sales
+
+    first_date = sales["InvoiceDate"].min().strftime("%Y-%m-%d")
+    figure, summary = update_revenue_forecast(
+        "All",
+        first_date,
+        first_date,
+    )
+
+    assert hasattr(figure, "to_dict")
+    assert "unavailable" in summary.lower()

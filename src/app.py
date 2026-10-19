@@ -4,7 +4,10 @@ from pathlib import Path
 import pandas as pd
 import plotly.express as px
 from dash import Dash, dcc, html, Input, Output, State, callback_context
-
+from src.revenue_forecasting import (
+    create_revenue_forecast,
+    evaluate_forecasting_models,
+)
 
 # --------------------------------------------------
 # RetailPulse AI - Real Retail Analytics Dashboard
@@ -803,6 +806,41 @@ app.layout = html.Div(
                     ),
                 ],
             ),
+                
+            # Experimental revenue forecasting
+            html.Div(
+                className="saas-card",
+                style={"marginTop": "24px"},
+                children=[
+                    html.H3(
+                        "Revenue Forecast",
+                        className="section-title",
+                    ),
+                    html.P(
+                        "Experimental three-month forecast selected by "
+                        "chronological backtesting. Historical data is limited, "
+                        "so forecasts should not be treated as reliable "
+                        "business predictions.",
+                        style={"color": "#64748b"},
+                    ),
+                    html.Div(
+                        id="forecast-model-summary",
+                        style={
+                            "marginBottom": "12px",
+                            "color": "#475569",
+                            "fontSize": "13px",
+                        },
+                    ),
+                    dcc.Graph(
+                        id="revenue-forecast-chart",
+                        config={
+                            "displayModeBar": True,
+                            "responsive": True,
+                        },
+                    ),
+                ],
+            ),
+
 
                 html.Footer(
                     "RetailPulse AI | Portfolio project | Python, Pandas, Dash & Plotly",
@@ -1342,6 +1380,154 @@ def export_filtered_csv(n_clicks, selected_country, start_date, end_date):
         index=False,
         encoding="utf-8-sig",
     )
+
+
+
+@app.callback(
+    Output("revenue-forecast-chart", "figure"),
+    Output("forecast-model-summary", "children"),
+    Input("country-selector", "value"),
+    Input("start-date", "date"),
+    Input("end-date", "date"),
+)
+def update_revenue_forecast(selected_country, start_date, end_date):
+    """Update the experimental forecast for the selected data filters."""
+    filtered_sales = sales.copy()
+
+    if selected_country != "All":
+        filtered_sales = filtered_sales.loc[
+            filtered_sales["Country"] == selected_country
+        ]
+
+    if start_date:
+        filtered_sales = filtered_sales.loc[
+            filtered_sales["InvoiceDate"] >= pd.Timestamp(start_date)
+        ]
+
+    if end_date:
+        filtered_sales = filtered_sales.loc[
+            filtered_sales["InvoiceDate"]
+            < pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        ]
+
+    filtered_sales = filtered_sales.copy()
+    filtered_sales["Month"] = (
+        filtered_sales["InvoiceDate"]
+        .dt.to_period("M")
+        .dt.to_timestamp()
+    )
+
+    monthly_revenue = (
+        filtered_sales.groupby("Month")["Revenue"]
+        .sum()
+        .sort_index()
+    )
+
+    # Require sufficient, consecutive monthly history.
+    if len(monthly_revenue) < 6:
+        fig = px.line(
+            title="Insufficient monthly history for forecasting",
+            template=chart_template,
+        )
+        fig.add_annotation(
+            text=(
+                "Select a wider date range or another country "
+                "to include at least six consecutive months."
+            ),
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font={"size": 13, "color": "#64748b"},
+        )
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        return apply_chart_theme(fig), "Forecast unavailable for this selection."
+
+    # Add missing calendar months as zero-revenue months.
+    monthly_revenue = monthly_revenue.asfreq("MS", fill_value=0)
+
+    try:
+        forecast, evaluation = create_revenue_forecast(
+            monthly_revenue,
+            horizon=3,
+        )
+    except (TypeError, ValueError) as error:
+        fig = px.line(
+            title="Forecast unavailable for this selection",
+            template=chart_template,
+        )
+        fig.add_annotation(
+            text=str(error),
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font={"size": 13, "color": "#64748b"},
+        )
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        return apply_chart_theme(fig), "The selected data could not be forecast."
+
+    history = monthly_revenue.rename("Revenue").reset_index()
+    history.columns = ["Month", "Revenue"]
+
+    fig = px.line(
+        history,
+        x="Month",
+        y="Revenue",
+        markers=True,
+        title="Historical and Forecast Revenue",
+        labels={
+            "Month": "Month",
+            "Revenue": "Revenue (£)",
+        },
+        template=chart_template,
+    )
+
+    fig.update_traces(
+        name="Historical revenue",
+        showlegend=True,
+        hovertemplate=(
+            "%{x|%b %Y}<br>Revenue: £%{y:,.2f}<extra></extra>"
+        ),
+    )
+
+    fig.add_scatter(
+        x=forecast["Month"],
+        y=forecast["Forecast Revenue"],
+        mode="lines+markers",
+        name="Forecast revenue",
+        line={"dash": "dash", "width": 3},
+        hovertemplate=(
+            "%{x|%b %Y}<br>Forecast: £%{y:,.2f}<extra></extra>"
+        ),
+    )
+
+    fig.update_xaxes(
+        showgrid=False,
+        tickformat="%b %Y",
+    )
+    fig.update_yaxes(
+        title="Revenue (£)",
+        gridcolor="#e9edf5",
+        rangemode="tozero",
+    )
+
+    fig = apply_chart_theme(fig)
+
+    selected_model = evaluation.iloc[0]["Model"]
+    selected_mae = evaluation.iloc[0]["MAE"]
+
+    summary = (
+        f"Selected model: {selected_model} | "
+        f"Backtesting MAE: £{selected_mae:,.2f} | "
+        "Experimental forecast — limited historical data."
+    )
+
+    return fig, summary
 
 
 
