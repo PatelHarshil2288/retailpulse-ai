@@ -43,7 +43,14 @@ sales = pd.read_csv(
         "Country",
         "CustomerID",
     ],
-    parse_dates=["InvoiceDate"],
+    low_memory=False,
+)
+
+# Parse the ISO-style dates written by data_processing.py.
+sales["InvoiceDate"] = pd.to_datetime(
+    sales["InvoiceDate"],
+    format="%Y-%m-%d %H:%M:%S",
+    errors="coerce",
 )
 
 # Validate essential fields.
@@ -418,7 +425,7 @@ app.layout = html.Div(
                                 ),
                                 html.P(
                                     "UCI Online Retail  |  "
-                                    "December 2010 – December 2011  |  "
+                                    "December 2010 – November 2011  |  "
                                     "Currency: GBP (£)",
                                     className="dashboard-hero-meta",
                                 ),
@@ -432,9 +439,6 @@ app.layout = html.Div(
                         ),
                     ],
                 ),
-
-
-
 
                 html.Div(
                     className="kpi-grid",
@@ -471,6 +475,79 @@ app.layout = html.Div(
                                 ),
                                 html.P(
                                     "Distinct sales invoices",
+                                    className="kpi-description",
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            className="kpi-card",
+                            children=[
+                                html.P(
+                                    "Units Sold",
+                                        className="kpi-label",
+                                    ),
+                                    html.H2(
+                                        f"{sales['Quantity'].sum():,.0f}",
+                                        id="units-sold-value",
+                                        className="kpi-value",
+                                    ),
+                                    html.P(
+                                        "Total units sold",
+                                        className="kpi-description",
+                                    ),
+                                ],
+                            ),
+                        
+                            html.Div(
+                                className="kpi-card",
+                                children=[
+                                    html.P(
+                                        "Unique Customers",
+                                        className="kpi-label",
+                                    ),
+                                    html.H2(
+                                        f"{sales['CustomerID'].nunique():,}",
+                                        id="unique-customers-value",
+                                        className="kpi-value",
+                                    ),
+                                    html.P(
+                                        "Identified customers",
+                                        className="kpi-description",
+                                    ),
+                                ],
+                            ),
+                        html.Div(
+                            className="kpi-card",
+                            children=[
+                                html.P(
+                                    "Repeat Customers",
+                                    className="kpi-label",
+                                ),
+                                html.H2(
+                                    id="repeat-customers-value",
+                                    children="0",
+                                    className="kpi-value",
+                                ),
+                                html.P(
+                                    "Customers with multiple invoices",
+                                    className="kpi-description",
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            className="kpi-card",
+                            children=[
+                                html.P(
+                                    "Repeat Customer Rate",
+                                    className="kpi-label",
+                                ),
+                                html.H2(
+                                    id="repeat-customer-rate-value",
+                                    children="0.0%",
+                                    className="kpi-value",
+                                ),
+                                html.P(
+                                    "Share of identified customers",
                                     className="kpi-description",
                                 ),
                             ],
@@ -847,6 +924,31 @@ app.layout = html.Div(
                         className="section-title",
                         style={"marginTop": "30px"},
                         ),
+                    dcc.Dropdown(
+                        id="product-metric-selector",
+                        options=[
+                            {
+                                "label": "Revenue (£)",
+                                "value": "Revenue",
+                            },
+                            {
+                                "label": "Units Sold",
+                                "value": "Units Sold",
+                            },
+                            {
+                                "label": "Average Selling Price (£)",
+                                "value": "Average Selling Price",
+                            },
+                        ],
+                        value="Revenue",
+                        clearable=False,
+                        searchable=False,
+                        style={
+                            "maxWidth": "360px",
+                            "marginTop": "12px",
+                            "marginBottom": "12px",
+                        },
+                    ),
                     dcc.Graph(
                         id="top-products-chart",
                         figure=px.bar(
@@ -929,7 +1031,7 @@ app.layout = html.Div(
                         "Historical RFM segmentation using customer "
                         "purchase recency, invoice frequency, and total "
                         "monetary value. Based on transactions ending "
-                        "9 December 2011; this is not a forecast.",
+                        "30 November 2011; this is not a forecast.",
                         style={"color": "#64748b"},
                     ),
                     dcc.Graph(
@@ -952,6 +1054,17 @@ app.layout = html.Div(
                                 "Segment": "Customer segment",
                                 "CustomerCount": "Number of customers",
                             },
+                            template=chart_template,
+                        ),
+                        config={
+                            "displayModeBar": True,
+                            "responsive": True,
+                        },
+                    ),
+                    dcc.Graph(
+                        id="customer-orders-chart",
+                        figure=px.bar(
+                            title="One-time vs. Repeat Customers",
                             template=chart_template,
                         ),
                         config={
@@ -988,11 +1101,16 @@ app.layout = html.Div(
     Output("monthly-chart", "figure"),
     Output("gross-revenue-value", "children"),
     Output("unique-orders-value", "children"),
+    Output("units-sold-value", "children"),
+    Output("unique-customers-value", "children"),
+    Output("repeat-customers-value", "children"),
+    Output("repeat-customer-rate-value", "children"),
     Output("average-order-value", "children"),
     Output("monthly-growth-value", "children"),
     Output("top-products-chart", "figure"),
     Output("country-performance-chart", "figure"),
     Output("country-contribution-chart", "figure"),
+    Output("customer-orders-chart", "figure"),
     Output("top-country-value", "children"),
     Output("top-product-value", "children"),
     Output("best-month-value", "children"),
@@ -1000,12 +1118,14 @@ app.layout = html.Div(
     Output("top-product-revenue", "children"),
     Output("best-month-revenue", "children"),
     Input("view-selector", "value"),
+    Input("product-metric-selector", "value"),
     Input("country-selector", "value"),
     Input("start-date", "date"),
     Input("end-date", "date"),
 )
 def update_chart(
     selected_metric,
+    selected_product_metric,
     selected_country,
     start_date,
     end_date,
@@ -1030,10 +1150,58 @@ def update_chart(
             filtered_sales["InvoiceDate"] < end_exclusive
         ]
 
+
     # Calculate KPIs for the selected filters.
     revenue = filtered_sales["Revenue"].sum()
     orders = filtered_sales["InvoiceNo"].nunique()
     average_value = revenue / orders if orders else 0
+
+    # Additional retail analytics KPIs.
+    units_sold = filtered_sales["Quantity"].sum()
+    unique_customers = filtered_sales["CustomerID"].nunique()
+        # Calculate repeat-customer metrics using identified customers.
+    customer_orders = (
+        filtered_sales.dropna(subset=["CustomerID"])
+        .groupby("CustomerID")["InvoiceNo"]
+        .nunique()
+    )
+
+    repeat_customers = int((customer_orders > 1).sum())
+        
+    # Prepare customer purchasing behaviour chart.
+    one_time_customers = int((customer_orders == 1).sum())
+
+    customer_orders_fig = px.bar(
+        x=["One-time customers", "Repeat customers"],
+        y=[one_time_customers, repeat_customers],
+        labels={
+            "x": "Customer type",
+            "y": "Number of customers",
+        },
+        title="One-time vs. Repeat Customers",
+        text=[one_time_customers, repeat_customers],
+        template=chart_template,
+    )
+
+    customer_orders_fig.update_traces(
+        textposition="outside",
+        hovertemplate=(
+            "%{x}<br>Customers: %{y:,}<extra></extra>"
+        ),
+    )
+
+    customer_orders_fig.update_yaxes(
+        rangemode="tozero",
+        gridcolor="#e9edf5",
+    )
+
+    customer_orders_fig = apply_chart_theme(customer_orders_fig)
+
+    repeat_customer_rate = (
+        repeat_customers / len(customer_orders) * 100
+        if len(customer_orders) > 0
+        else 0
+    )
 
 
     # Calculate Business Insights for the selected filters.
@@ -1165,6 +1333,7 @@ def update_chart(
         )
         fig.update_xaxes(visible=False)
         fig.update_yaxes(visible=False)
+
     else:
         fig = px.bar(
             monthly_filtered,
@@ -1176,11 +1345,29 @@ def update_chart(
                 "Month": "Month",
                 selected_metric: labels[selected_metric],
             },
-            hover_data={
-                "Month": "|%B %Y",
-                "Revenue": ":,.2f",
-                "Orders": ":,",
-                "Average Order Value": ":.2f",
+            custom_data=[
+                "Revenue",
+                "Orders",
+                "Average Order Value",
+            ],
+        )
+
+        fig.update_traces(
+            hovertemplate=(
+                "<b>Month: %{x|%B %Y}</b><br>"
+                "Gross sales revenue (£): %{customdata[0]:,.2f}<br>"
+                "Orders: %{customdata[1]:,.0f}<br>"
+                "Average Order Value (£): %{customdata[2]:,.2f}"
+                "<extra></extra>"
+            ),
+            hoverlabel={
+                "bgcolor": "#14213d",
+                "bordercolor": "#203f72",
+                "font": {
+                    "family": "Arial, sans-serif",
+                    "size": 13,
+                    "color": "#ffffff",
+                },
             },
         )
 
@@ -1204,23 +1391,66 @@ def update_chart(
     )
 
 
-    # Prepare top 10 products for the selected country and date range.
+    # Prepare product metrics for the selected country and date range.
     products_filtered = (
         filtered_sales.groupby("Product", as_index=False)
         .agg(
             Revenue=("Revenue", "sum"),
             Quantity_Sold=("Quantity", "sum"),
         )
-        .sort_values("Revenue", ascending=False)
-        .head(10)
-        .sort_values("Revenue", ascending=True)
     )
 
+    # Calculate weighted average selling price per product.
+    products_filtered["Average_Selling_Price"] = (
+        products_filtered["Revenue"]
+        / products_filtered["Quantity_Sold"].where(
+            products_filtered["Quantity_Sold"] != 0
+        )
+    )
 
-    # Top 10 products chart with an empty state.
-    if products_filtered.empty or products_filtered["Revenue"].sum() <= 0:
+    # Map the selected metric to its data column and chart labels.
+    product_metric_config = {
+        "Revenue": {
+            "column": "Revenue",
+            "axis_label": "Revenue (£)",
+            "title": "Revenue",
+        },
+        "Units Sold": {
+            "column": "Quantity_Sold",
+            "axis_label": "Units sold",
+            "title": "Units Sold",
+        },
+        "Average Selling Price": {
+            "column": "Average_Selling_Price",
+            "axis_label": "Average selling price (£)",
+            "title": "Average Selling Price",
+        },
+    }
+
+    product_config = product_metric_config.get(
+        selected_product_metric,
+        product_metric_config["Revenue"],
+    )
+    product_column = product_config["column"]
+    product_axis_label = product_config["axis_label"]
+    product_title = product_config["title"]
+
+    # Keep only valid values, then select the top 10 for the chosen metric.
+    valid_products = products_filtered.dropna(subset=[product_column])
+
+    products_filtered = (
+        valid_products.sort_values(
+            product_column,
+            ascending=False,
+        )
+        .head(10)
+        .sort_values(product_column, ascending=True)
+    )
+
+    # Show a useful empty state when the selected metric has no usable data.
+    if products_filtered.empty or products_filtered[product_column].sum() <= 0:
         product_fig = px.bar(
-            title=f"No product revenue available — {selected_country}",
+            title=f"No product data available — {selected_country}",
             template=chart_template,
         )
         product_fig.add_annotation(
@@ -1237,23 +1467,27 @@ def update_chart(
     else:
         product_fig = px.bar(
             products_filtered,
-            x="Revenue",
+            x=product_column,
             y="Product",
             orientation="h",
-            title=f"Top 10 Products by Revenue — {selected_country}",
+            title=f"Top 10 Products by {product_title} — {selected_country}",
             labels={
-                "Revenue": "Revenue (£)",
+                product_column: product_axis_label,
                 "Product": "Product",
+                "Revenue": "Revenue (£)",
                 "Quantity_Sold": "Quantity sold",
+                "Average_Selling_Price": "Average selling price (£)",
             },
             template=chart_template,
-            hover_data={"Quantity_Sold": True},
+            hover_data={
+                "Revenue": ":.2f",
+                "Quantity_Sold": True,
+            },
         )
         product_fig.update_xaxes(
             gridcolor="#e9edf5",
             rangemode="tozero",
         )
-
     product_fig.update_layout(
         title_x=0.02,
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
@@ -1416,17 +1650,20 @@ def update_chart(
     country_fig = apply_chart_theme(country_fig)
     contribution_fig = apply_chart_theme(contribution_fig)
 
-
-
     return (
         fig,
         f"£{revenue:,.2f}",
         f"{orders:,}",
+        f"{units_sold:,.0f}",
+        f"{unique_customers:,}",
+        f"{repeat_customers:,}",
+        f"{repeat_customer_rate:.1f}%",
         f"£{average_value:,.2f}",
         monthly_growth,
         product_fig,
         country_fig,
         contribution_fig,
+        customer_orders_fig,
         top_country,
         top_product,
         best_month,

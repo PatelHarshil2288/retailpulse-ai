@@ -48,7 +48,7 @@ def test_main_callback_returns_expected_outputs():
     if hasattr(callback_function, "__wrapped__"):
         callback_function = callback_function.__wrapped__
 
-    results = callback_function("Revenue", "All", None, None)
+    results = callback_function("Revenue", "Revenue", "All", None, None)
 
     assert len(results) == 14
 
@@ -80,7 +80,7 @@ def test_main_callback_calculates_kpis_from_sales_data():
     if hasattr(callback_function, "__wrapped__"):
         callback_function = callback_function.__wrapped__
 
-    results = callback_function("Revenue", "All", None, None)
+    results = callback_function("Revenue", "Revenue", "All", None, None)
 
     expected_revenue = sales["Revenue"].sum()
     expected_orders = sales["InvoiceNo"].nunique()
@@ -114,7 +114,7 @@ def test_country_filter_updates_kpis():
         callback_function = callback_function.__wrapped__
 
     results = callback_function(
-        "Revenue", selected_country, None, None
+        "Revenue", "Revenue", selected_country, None, None
     )
 
     expected_revenue = country_sales["Revenue"].sum()
@@ -155,7 +155,7 @@ def test_date_filter_updates_kpis():
         callback_function = callback_function.__wrapped__
 
     results = callback_function(
-        "Revenue", "All", start_date, end_date
+        "Revenue", "Revenue", "All", start_date, end_date
     )
 
     expected_revenue = filtered_sales["Revenue"].sum()
@@ -292,3 +292,146 @@ def test_revenue_forecast_handles_short_date_range():
 
     assert hasattr(figure, "to_dict")
     assert "unavailable" in summary.lower()
+
+
+def test_product_metric_selector_contains_expected_options():
+    """Verify that the product explorer exposes all three metrics."""
+    from src.app import app
+
+    layout_text = str(app.layout)
+
+    assert "product-metric-selector" in layout_text
+    assert "Units Sold" in layout_text
+    assert "Average Selling Price" in layout_text
+    assert "Revenue" in layout_text
+
+
+def test_product_explorer_metrics_and_rankings(monkeypatch):
+    """Verify that each product metric uses the correct aggregation."""
+    import pandas as pd
+    from src import app as app_module
+
+    sample_sales = pd.DataFrame(
+        {
+            "InvoiceNo": ["I1", "I2", "I3", "I4", "I5"],
+            "Product": [
+                "Product A",
+                "Product A",
+                "Product B",
+                "Product C",
+                "Product C",
+            ],
+            "Quantity": [4, 6, 2, 3, 3],
+            "Revenue": [8.0, 12.0, 40.0, 15.0, 15.0],
+            "InvoiceDate": pd.to_datetime(
+                [
+                    "2011-01-01",
+                    "2011-01-02",
+                    "2011-01-03",
+                    "2011-01-04",
+                    "2011-01-05",
+                ]
+            ),
+            "Country": [
+                "United Kingdom",
+                "United Kingdom",
+                "United Kingdom",
+                "United Kingdom",
+                "United Kingdom",
+            ],
+        }
+    )
+
+    monkeypatch.setattr(app_module, "sales", sample_sales)
+
+    callback_key = next(
+        key
+        for key in app_module.app.callback_map
+        if "monthly-chart.figure" in key
+    )
+    callback_function = app_module.app.callback_map[callback_key]["callback"]
+
+    if hasattr(callback_function, "__wrapped__"):
+        callback_function = callback_function.__wrapped__
+
+    expected_rankings = {
+        "Revenue": ["Product A", "Product C", "Product B"],
+        "Units Sold": ["Product B", "Product C", "Product A"],
+        "Average Selling Price": [
+            "Product A",
+            "Product C",
+            "Product B",
+        ],
+    }
+
+    expected_values = {
+        "Revenue": [20.0, 30.0, 40.0],
+        "Units Sold": [2, 6, 10],
+        "Average Selling Price": [2.0, 5.0, 20.0],
+    }
+
+    for metric, expected_products in expected_rankings.items():
+        results = callback_function(
+            "Revenue",
+            metric,
+            "All",
+            None,
+            None,
+        )
+
+        product_figure = results[5]
+
+        assert len(results) == 14
+        assert list(product_figure.data[0].y) == expected_products
+        assert list(product_figure.data[0].x) == expected_values[metric]
+        assert metric in product_figure.layout.title.text
+
+
+def test_product_explorer_respects_country_and_date_filters(monkeypatch):
+    """Verify product metrics use the selected country and date range."""
+    import pandas as pd
+    from src import app as app_module
+
+    sample_sales = pd.DataFrame(
+        {
+            "InvoiceNo": ["I1", "I2", "I3"],
+            "Product": ["Product A", "Product B", "Product A"],
+            "Quantity": [5, 10, 100],
+            "Revenue": [50.0, 20.0, 1000.0],
+            "InvoiceDate": pd.to_datetime(
+                ["2011-01-10", "2011-01-12", "2011-02-10"]
+            ),
+            "Country": [
+                "United Kingdom",
+                "France",
+                "United Kingdom",
+            ],
+        }
+    )
+
+    monkeypatch.setattr(app_module, "sales", sample_sales)
+
+    callback_key = next(
+        key
+        for key in app_module.app.callback_map
+        if "monthly-chart.figure" in key
+    )
+    callback_function = app_module.app.callback_map[callback_key]["callback"]
+
+    if hasattr(callback_function, "__wrapped__"):
+        callback_function = callback_function.__wrapped__
+
+    results = callback_function(
+        "Revenue",
+        "Revenue",
+        "United Kingdom",
+        "2011-01-01",
+        "2011-01-31",
+    )
+
+    product_figure = results[5]
+
+    assert list(product_figure.data[0].y) == ["Product A"]
+    assert list(product_figure.data[0].x) == [50.0]
+    assert "United Kingdom" in product_figure.layout.title.text
+    
