@@ -1,17 +1,8 @@
----
-title: RetailPulse AI
-emoji: 📊
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
----
-
 # RetailPulse AI 📊
 
 **Interactive Retail Analytics Dashboard | Python · Plotly Dash · Pandas**
 
-RetailPulse AI is an interactive retail analytics portfolio project built with Python, Pandas, Plotly, and Dash. The Docker-based deployment runs the same Python dashboard on Hugging Face Spaces and can be deployed from the same container configuration to Render.
+RetailPulse AI is an interactive retail analytics portfolio project built with Python, Pandas, Plotly, and Dash. Its Linux container is configured for Hostless as the primary host, with Render retained as a secondary target. Both use the same application and Dockerfile.
 
 ## 📸 Dashboard Preview
 
@@ -138,22 +129,15 @@ docker run --rm -p 7860:7860 retailpulse-ai
 
 Open http://127.0.0.1:7860/. The image prepares the UCI dataset and processed CSVs during its build.
 
-### 7. Deploy the same container to Hugging Face Spaces
+### 7. Deploy to Hostless
 
-Create a **Docker** Space at [huggingface.co/new-space](https://huggingface.co/new-space), then push this repository to its Git remote:
+Create a Hostless App, connect the GitHub repository and `main` branch, and select **Docker** as the build system. The repository's `hostless.yaml` selects the Dockerfile, sets the HTTP health check, and caps runtime requests at the free pool's 0.5 vCPU and 1 GiB RAM for one replica. The container listens on Hostless's `PORT` environment variable.
 
-```bash
-git remote add hf https://huggingface.co/spaces/patelharshil2288/retailpulse-ai
-git push hf main
-```
-
-Use a Hugging Face access token with write permission when Git prompts. If the `hf` remote already exists, do not add it again.
-
-**Plan note:** Hugging Face currently requires a paid plan to create Docker Spaces, even though its basic CPU hardware has no hourly compute charge. Check the [current Spaces pricing and requirements](https://huggingface.co/docs/hub/spaces-overview#hardware-resources) before creating the Space.
+The Hostless free allowance is shared across all apps, workers, and databases in the account. The app is configured to stay within that allowance by itself; other resources in the account also consume it. See [Hostless pricing](https://hostless.cloud/pricing) and the [Hostless first-app guide](https://docs.hostless.cloud/started).
 
 ### 8. Render backup
 
-The repository includes a Render Blueprint configured to build the same `Dockerfile`. To use it, create a Render web service from the repository and apply `render.yaml`. The container reads Render's `PORT` environment variable, so the application code does not need a hosting-specific rewrite.
+The repository includes a Render Blueprint configured to build the same `Dockerfile`. If Hostless has an availability or compatibility issue, create a Render web service from the repository and apply `render.yaml`. The container reads Render's `PORT` environment variable, so the application code does not need a hosting-specific rewrite.
 
 ## 🧪 Automated Testing
 
@@ -178,7 +162,7 @@ Planned and implemented enhancements include:
 - Sales forecasting and model evaluation. ✅
 - Additional customer-level analytics. ✅
 - Top customer performance summaries and ranking. ✅
-- Docker deployment to Hugging Face Spaces, with Render as a backup target. ⏳
+- Docker deployment to Hostless, with Render as a backup target. ⏳
 - Dashboard screenshots and demonstration materials. ⏳
 
 The project roadmap reflects implemented work once it is validated in the dashboard and test suite.
@@ -187,7 +171,7 @@ The project roadmap reflects implemented work once it is validated in the dashbo
 
 **Local Dash dashboard operational · Portable Docker deployment configured · Public deployment pending**
 
-The full Python Dash application is preserved. Hugging Face Docker and Render can both build from the same container definition.
+The full Python Dash application is preserved. Hostless is the primary target; Render is configured as a secondary target using the same Docker image.
 
 ## 👨‍💻 Author
 
