@@ -1,8 +1,17 @@
+---
+title: RetailPulse AI
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # RetailPulse AI 📊
 
 **Interactive Retail Analytics Dashboard | Python · Plotly Dash · Pandas**
 
-RetailPulse AI is an interactive retail analytics portfolio project that transforms historical transaction data into actionable business insights. Built with Python, Pandas, Plotly, and Dash, the application helps users explore sales performance, identify top-performing products and countries, and monitor key business metrics through an interactive dashboard.
+RetailPulse AI is an interactive retail analytics portfolio project built with Python, Pandas, Plotly, and Dash. The Docker-based deployment runs the same Python dashboard on Hugging Face Spaces and can be deployed from the same container configuration to Render.
 
 ## 📸 Dashboard Preview
 
@@ -31,6 +40,8 @@ RetailPulse AI is an interactive retail analytics portfolio project that transfo
 - **Top Products:** Identify products with the highest revenue.
 - **Country Performance:** Compare revenue across countries.
 - **Revenue Contribution:** Explore each country's share of revenue.
+- **Product Association Analysis:** Surface products frequently purchased together in the same invoice.
+- **Top Customer Insights:** Rank the most valuable customer accounts by revenue, invoice count, and average order value.
 - **Interactive Filters:** Filter results by country and date range.
 - **Reset Filters:** Restore the default country and date selection.
 - **CSV Export:** Download filtered sales transactions.
@@ -68,7 +79,7 @@ Place the downloaded Excel file at:
 
 `data/raw/Online Retail.xlsx`
 
-Processed datasets are generated or stored under `data/processed/` according to the project's data-processing workflow. Raw and processed datasets should not be committed to GitHub unless there is a deliberate reason to publish them.
+Processed datasets are generated during the Docker image build by `prepare_deployment.py`. Raw and processed datasets remain excluded from Git and are created inside the container.
 
 ## 🚀 Getting Started
 
@@ -106,15 +117,43 @@ Download the [UCI Online Retail Dataset](https://archive.ics.uci.edu/dataset/352
 
 Follow the project's data-processing workflow to create the processed files required by the dashboard.
 
-### 5. Run the dashboard
+### 5. Run the dashboard locally
 
 ```bash
-python src/app.py
+python -m src.app
 ```
 
 Open the local address in your browser:
 
 http://127.0.0.1:8050/
+
+### 6. Build and run the Docker image locally
+
+Install Docker Desktop, then from the repository root run:
+
+```bash
+docker build -t retailpulse-ai .
+docker run --rm -p 7860:7860 retailpulse-ai
+```
+
+Open http://127.0.0.1:7860/. The image prepares the UCI dataset and processed CSVs during its build.
+
+### 7. Deploy the same container to Hugging Face Spaces
+
+Create a **Docker** Space at [huggingface.co/new-space](https://huggingface.co/new-space), then push this repository to its Git remote:
+
+```bash
+git remote add hf https://huggingface.co/spaces/patelharshil2288/retailpulse-ai
+git push hf main
+```
+
+Use a Hugging Face access token with write permission when Git prompts. If the `hf` remote already exists, do not add it again.
+
+**Plan note:** Hugging Face currently requires a paid plan to create Docker Spaces, even though its basic CPU hardware has no hourly compute charge. Check the [current Spaces pricing and requirements](https://huggingface.co/docs/hub/spaces-overview#hardware-resources) before creating the Space.
+
+### 8. Render backup
+
+The repository includes a Render Blueprint configured to build the same `Dockerfile`. To use it, create a Render web service from the repository and apply `render.yaml`. The container reads Render's `PORT` environment variable, so the application code does not need a hosting-specific rewrite.
 
 ## 🧪 Automated Testing
 
@@ -126,28 +165,29 @@ Run the complete test suite from the repository root:
 python -m pytest -v
 ```
 
-The latest verified test run reported **38 passed tests and one non-blocking warning**. Test results may change as the project evolves.
+The latest verified test run reported **74 passed tests and one non-blocking warning**. Test results may change as the project evolves.
 
 The tests cover data validation, transaction classification, KPI calculations, country and date filtering, reset behavior, callback outputs, and CSV export.
 
 ## 🗺️ Project Roadmap
 
-Planned enhancements include:
+Planned and implemented enhancements include:
 
-- RFM-based customer segmentation.
-- Product association analysis and cross-selling insights.
-- Sales forecasting and model evaluation.
-- Additional customer-level analytics.
-- Deployment of a publicly accessible dashboard.
-- Dashboard screenshots and demonstration materials.
+- RFM-based customer segmentation. ✅
+- Product association analysis and cross-selling insights. ✅
+- Sales forecasting and model evaluation. ✅
+- Additional customer-level analytics. ✅
+- Top customer performance summaries and ranking. ✅
+- Docker deployment to Hugging Face Spaces, with Render as a backup target. ⏳
+- Dashboard screenshots and demonstration materials. ⏳
 
-These features will be documented as implemented only after they are developed and tested.
+The project roadmap reflects implemented work once it is validated in the dashboard and test suite.
 
 ## 📌 Current Status
 
-**Local dashboard operational · Automated tests passing · Public deployment pending**
+**Local Dash dashboard operational · Portable Docker deployment configured · Public deployment pending**
 
-The dashboard currently runs locally. A public deployment URL will be added after deployment and validation are complete.
+The full Python Dash application is preserved. Hugging Face Docker and Render can both build from the same container definition.
 
 ## 👨‍💻 Author
 

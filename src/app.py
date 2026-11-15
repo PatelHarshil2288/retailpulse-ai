@@ -14,6 +14,14 @@ from src.customer_segmentation import (
     prepare_rfm_features,
     fit_customer_segments,
 )
+from src.product_association import (
+    build_product_associations,
+    summarize_top_product_pair,
+)
+from src.customer_insights import (
+    build_customer_value_summary,
+    summarize_top_customers,
+)
 
 # --------------------------------------------------
 # RetailPulse AI - Real Retail Analytics Dashboard
@@ -124,6 +132,9 @@ top_country = country_revenue.index[0] if not country_revenue.empty else "N/A"
 top_country_revenue = (
     country_revenue.iloc[0] if not country_revenue.empty else 0
 )
+top_country_share = (
+    (top_country_revenue / total_revenue * 100) if total_revenue else 0
+)
 
 product_revenue = (
     sales.groupby("Product")["Revenue"]
@@ -134,6 +145,10 @@ product_revenue = (
 top_product = product_revenue.index[0] if not product_revenue.empty else "N/A"
 top_product_revenue = (
     product_revenue.iloc[0] if not product_revenue.empty else 0
+)
+
+top_product_share = (
+    (top_product_revenue / total_revenue * 100) if total_revenue else 0
 )
 
 monthly_revenue = sales.groupby("Month")["Revenue"].sum().sort_index()
@@ -147,6 +162,21 @@ best_month_revenue = (
     monthly_revenue.max() if not monthly_revenue.empty else 0
 )
 
+customer_revenue = (
+    sales.dropna(subset=["CustomerID"])
+    .groupby("CustomerID")["Revenue"]
+    .sum()
+    .sort_values(ascending=False)
+)
+top_customer = (
+    int(customer_revenue.index[0]) if not customer_revenue.empty else "N/A"
+)
+top_customer_revenue = (
+    customer_revenue.iloc[0] if not customer_revenue.empty else 0
+)
+top_customer_share = (
+    (top_customer_revenue / total_revenue * 100) if total_revenue else 0
+)
 
 chart_template = "plotly_white"
 
@@ -833,6 +863,98 @@ app.layout = html.Div(
                             ],
                             style=card_style,
                         ),
+                        html.Div(
+                            [
+                                html.P("Top Customer by Revenue"),
+                                html.H3(
+                                    f"Customer {top_customer}" if top_customer != "N/A" else "N/A",
+                                    id="top-customer-value",
+                                ),
+                                html.P(
+                                    f"Revenue: £{top_customer_revenue:,.2f}",
+                                    id="top-customer-revenue",
+                                    style={"color": "#64748b"},
+                                ),
+                            ],
+                            style=card_style,
+                        ),
+                    ],
+                ),
+            ],
+        ),
+
+        html.Div(
+            className="saas-card",
+            style={"marginBottom": "24px"},
+            children=[
+                html.H3(
+                    "Calculated Business Observations",
+                    style={"marginTop": "0", "color": "#172033"},
+                ),
+                html.P(
+                    "These findings are calculated from the current dataset and should be interpreted as evidence, not recommendations.",
+                    style={"color": "#64748b"},
+                ),
+                html.Div(
+                    style={
+                        "display": "grid",
+                        "gridTemplateColumns": "repeat(auto-fit, minmax(220px, 1fr))",
+                        "gap": "16px",
+                    },
+                    children=[
+                        html.Div(
+                            [
+                                html.P("Revenue concentration"),
+                                html.H3(f"{top_country_share:.1f}% of gross sales", id="country-concentration-value"),
+                                html.P(
+                                    f"{top_country} contributes £{top_country_revenue:,.2f} of revenue.",
+                                    style={"color": "#64748b"},
+                                ),
+                            ],
+                            style=card_style,
+                        ),
+                        html.Div(
+                            [
+                                html.P("Highest-selling product"),
+                                html.H3(top_product, id="product-concentration-value", style={"fontSize": "16px"}),
+                                html.P(
+                                    f"{top_product_share:.1f}% of gross sales, or £{top_product_revenue:,.2f}.",
+                                    style={"color": "#64748b"},
+                                ),
+                            ],
+                            style=card_style,
+                        ),
+                        html.Div(
+                            [
+                                html.P("Top customer contribution"),
+                                html.H3(
+                                    f"Customer {top_customer}" if top_customer != "N/A" else "N/A",
+                                    id="customer-contribution-value",
+                                ),
+                                html.P(
+                                    f"{top_customer_share:.1f}% of revenue, or £{top_customer_revenue:,.2f}." if top_customer != "N/A" else "No identifiable customer data available.",
+                                    style={"color": "#64748b"},
+                                ),
+                            ],
+                            style=card_style,
+                        ),
+                    ],
+                ),
+                html.Div(
+                    id="business-insight-summary",
+                    style={
+                        "marginTop": "18px",
+                        "paddingTop": "18px",
+                        "borderTop": "1px solid #e6ebf3",
+                        "color": "#334155",
+                        "fontSize": "14px",
+                        "lineHeight": "1.6",
+                    },
+                    children=[
+                        html.P(
+                            "Revenue concentration, top product contribution, and repeat-customer activity are summarized here for the current filtered view.",
+                            style={"margin": "0"},
+                        )
                     ],
                 ),
             ],
@@ -949,21 +1071,27 @@ app.layout = html.Div(
                             "marginBottom": "12px",
                         },
                     ),
-                    dcc.Graph(
-                        id="top-products-chart",
-                        figure=px.bar(
-                            top_products.sort_values("Revenue", ascending=True),
-                            x="Revenue",
-                            y="Product",
-                            orientation="h",
-                            title="Top 10 Products",
-                            labels={
-                                "Revenue": "Revenue (£)",
-                                "Product": "Product",
+                                            
+                        dcc.Graph(
+                            id="top-products-chart",
+                            figure=px.bar(
+                                top_products.sort_values("Revenue", ascending=True),
+                                x="Revenue",
+                                y="Product",
+                                orientation="h",
+                                title="Top 10 Products",
+                                labels={
+                                    "Revenue": "Revenue (£)",
+                                    "Product": "Product",
+                                },
+                                template=chart_template,
+                            ),
+                            config={
+                                "displayModeBar": True,
+                                "responsive": True,
                             },
-                            template=chart_template,
                         ),
-                    ),
+
                     html.H3(
                         "Top 10 Countries by Revenue",
                         className="section-title",
@@ -980,6 +1108,66 @@ app.layout = html.Div(
                     ),
                     dcc.Graph(
                         id="country-contribution-chart",
+                    ),
+                ],
+            ),
+
+            html.Div(
+                className="saas-card",
+                style={"marginTop": "24px"},
+                children=[
+                    html.H3(
+                        "Product Association Analysis",
+                        className="section-title",
+                    ),
+                    html.P(
+                        "Products commonly purchased together in the same invoice suggest natural cross-sell opportunities and basket patterns.",
+                        style={"color": "#64748b"},
+                    ),
+                    html.Div(
+                        id="cross-sell-summary",
+                        style={
+                            "marginBottom": "12px",
+                            "color": "#475569",
+                            "fontSize": "13px",
+                        },
+                    ),
+                    dcc.Graph(
+                        id="cross-sell-chart",
+                        config={
+                            "displayModeBar": True,
+                            "responsive": True,
+                        },
+                    ),
+                ],
+            ),
+
+            html.Div(
+                className="saas-card",
+                style={"marginTop": "24px"},
+                children=[
+                    html.H3(
+                        "Top Customers by Revenue",
+                        className="section-title",
+                    ),
+                    html.P(
+                        "High-value customer accounts ranked by accumulated revenue and order count for the current selection.",
+                        style={"color": "#64748b"},
+                    ),
+                    html.Div(
+                        id="customer-insights-summary",
+                        style={
+                            "marginBottom": "12px",
+                            "color": "#475569",
+                            "fontSize": "13px",
+                        },
+                    ),
+                    dcc.Graph(
+                        id="customer-insights-chart",
+                        config={
+                            "displayModeBar": True,
+                            "responsive": True,
+                        },
                     ),
                 ],
             ),
@@ -1101,22 +1289,17 @@ app.layout = html.Div(
     Output("monthly-chart", "figure"),
     Output("gross-revenue-value", "children"),
     Output("unique-orders-value", "children"),
-    Output("units-sold-value", "children"),
-    Output("unique-customers-value", "children"),
-    Output("repeat-customers-value", "children"),
-    Output("repeat-customer-rate-value", "children"),
     Output("average-order-value", "children"),
     Output("monthly-growth-value", "children"),
     Output("top-products-chart", "figure"),
     Output("country-performance-chart", "figure"),
     Output("country-contribution-chart", "figure"),
     Output("customer-orders-chart", "figure"),
+    Output("repeat-customers-value", "children"),
+    Output("repeat-customer-rate-value", "children"),
+    Output("units-sold-value", "children"),
+    Output("unique-customers-value", "children"),
     Output("top-country-value", "children"),
-    Output("top-product-value", "children"),
-    Output("best-month-value", "children"),
-    Output("top-country-revenue", "children"),
-    Output("top-product-revenue", "children"),
-    Output("best-month-revenue", "children"),
     Input("view-selector", "value"),
     Input("product-metric-selector", "value"),
     Input("country-selector", "value"),
@@ -1138,7 +1321,6 @@ def update_chart(
             sales["Country"] == selected_country
         ]
 
-    # Apply the date range, including the entire end date.
     if start_date:
         filtered_sales = filtered_sales.loc[
             filtered_sales["InvoiceDate"] >= pd.Timestamp(start_date)
@@ -1150,26 +1332,32 @@ def update_chart(
             filtered_sales["InvoiceDate"] < end_exclusive
         ]
 
-
-    # Calculate KPIs for the selected filters.
     revenue = filtered_sales["Revenue"].sum()
     orders = filtered_sales["InvoiceNo"].nunique()
     average_value = revenue / orders if orders else 0
-
-    # Additional retail analytics KPIs.
     units_sold = filtered_sales["Quantity"].sum()
-    unique_customers = filtered_sales["CustomerID"].nunique()
-        # Calculate repeat-customer metrics using identified customers.
-    customer_orders = (
-        filtered_sales.dropna(subset=["CustomerID"])
-        .groupby("CustomerID")["InvoiceNo"]
-        .nunique()
-    )
 
-    repeat_customers = int((customer_orders > 1).sum())
-        
-    # Prepare customer purchasing behaviour chart.
-    one_time_customers = int((customer_orders == 1).sum())
+    customer_id_column = filtered_sales.get("CustomerID")
+    if customer_id_column is None:
+        unique_customers = 0
+        repeat_customers = 0
+        repeat_customer_rate = 0.0
+        customer_orders = pd.Series(dtype=float)
+        one_time_customers = 0
+    else:
+        customer_orders = (
+            filtered_sales.dropna(subset=["CustomerID"])
+            .groupby("CustomerID")["InvoiceNo"]
+            .nunique()
+        )
+        unique_customers = int(customer_id_column.nunique())
+        repeat_customers = int((customer_orders > 1).sum())
+        one_time_customers = int((customer_orders == 1).sum())
+        repeat_customer_rate = (
+            repeat_customers / len(customer_orders) * 100
+            if len(customer_orders) > 0
+            else 0
+        )
 
     customer_orders_fig = px.bar(
         x=["One-time customers", "Repeat customers"],
@@ -1182,44 +1370,23 @@ def update_chart(
         text=[one_time_customers, repeat_customers],
         template=chart_template,
     )
-
     customer_orders_fig.update_traces(
         textposition="outside",
-        hovertemplate=(
-            "%{x}<br>Customers: %{y:,}<extra></extra>"
-        ),
+        hovertemplate="%{x}<br>Customers: %{y:,}<extra></extra>",
     )
-
-    customer_orders_fig.update_yaxes(
-        rangemode="tozero",
-        gridcolor="#e9edf5",
-    )
-
+    customer_orders_fig.update_yaxes(rangemode="tozero", gridcolor="#e9edf5")
     customer_orders_fig = apply_chart_theme(customer_orders_fig)
 
-    repeat_customer_rate = (
-        repeat_customers / len(customer_orders) * 100
-        if len(customer_orders) > 0
-        else 0
-    )
-
-
-    # Calculate Business Insights for the selected filters.
     country_revenue = (
         filtered_sales.groupby("Country")["Revenue"]
         .sum()
         .sort_values(ascending=False)
     )
-
     top_country = (
-        country_revenue.index[0]
-        if not country_revenue.empty
-        else "N/A"
+        country_revenue.index[0] if not country_revenue.empty else "N/A"
     )
     top_country_revenue = (
-        country_revenue.iloc[0]
-        if not country_revenue.empty
-        else 0
+        country_revenue.iloc[0] if not country_revenue.empty else 0
     )
 
     product_revenue = (
@@ -1227,88 +1394,58 @@ def update_chart(
         .sum()
         .sort_values(ascending=False)
     )
-
     top_product = (
-        product_revenue.index[0]
-        if not product_revenue.empty
-        else "N/A"
+        product_revenue.index[0] if not product_revenue.empty else "N/A"
     )
-
     top_product_revenue = (
-        product_revenue.iloc[0]
-        if not product_revenue.empty
-        else 0
+        product_revenue.iloc[0] if not product_revenue.empty else 0
     )
 
     monthly_revenue = (
         filtered_sales.groupby(
-            filtered_sales["InvoiceDate"]
-            .dt.to_period("M")
-            .dt.to_timestamp()
+            filtered_sales["InvoiceDate"].dt.to_period("M").dt.to_timestamp()
         )["Revenue"]
         .sum()
         .sort_index()
     )
-
-
     best_month = (
         monthly_revenue.idxmax().strftime("%B %Y")
         if not monthly_revenue.empty
         else "N/A"
     )
-
     best_month_revenue = (
-        monthly_revenue.max()
-        if not monthly_revenue.empty
-        else 0
+        monthly_revenue.max() if not monthly_revenue.empty else 0
     )
 
-
-    # Aggregate monthly results without creating an intermediate DataFrame.
     monthly_filtered = (
         filtered_sales.groupby(
-            filtered_sales["InvoiceDate"]
-            .dt.to_period("M")
-            .dt.to_timestamp()
+            filtered_sales["InvoiceDate"].dt.to_period("M").dt.to_timestamp()
         )
-        .agg(
-            Revenue=("Revenue", "sum"),
-            Orders=("InvoiceNo", "nunique"),
-        )
+        .agg(Revenue=("Revenue", "sum"), Orders=("InvoiceNo", "nunique"))
         .rename_axis("Month")
         .reset_index()
         .sort_values("Month")
     )
+    monthly_filtered["Average Order Value"] = (
+        monthly_filtered["Revenue"].div(monthly_filtered["Orders"])
+    )
 
-    monthly_filtered["Average Order Value"] = monthly_filtered["Revenue"].div(monthly_filtered["Orders"])
-
-
-    # Calculate growth between consecutive calendar months.
     monthly_growth = "N/A"
-
     if not monthly_filtered.empty:
         monthly_calendar = monthly_filtered.set_index("Month")["Revenue"]
-
-        # Include missing calendar months with zero revenue.
         monthly_calendar = monthly_calendar.asfreq("MS", fill_value=0)
-
         if len(monthly_calendar) >= 2:
             previous_revenue = monthly_calendar.iloc[-2]
             current_revenue = monthly_calendar.iloc[-1]
-
             if previous_revenue > 0:
                 growth_percent = (
-                    (current_revenue - previous_revenue)
-                    / previous_revenue
+                    (current_revenue - previous_revenue) / previous_revenue
                 ) * 100
-
                 monthly_growth = f"{growth_percent:+.2f}%"
             elif current_revenue > 0:
                 monthly_growth = "New sales"
             else:
                 monthly_growth = "0.00%"
-
-
 
     labels = {
         "Revenue": "Gross sales revenue (£)",
@@ -1316,12 +1453,8 @@ def update_chart(
         "Average Order Value": "Average order value (£)",
     }
 
-    # Monthly chart.
     if monthly_filtered.empty:
-        fig = px.bar(
-            title=f"No monthly data available — {selected_country}",
-            template=chart_template,
-        )
+        fig = px.bar(title=f"No monthly data available — {selected_country}", template=chart_template)
         fig.add_annotation(
             text="Try selecting a different country or date range.",
             xref="paper",
@@ -1333,7 +1466,6 @@ def update_chart(
         )
         fig.update_xaxes(visible=False)
         fig.update_yaxes(visible=False)
-
     else:
         fig = px.bar(
             monthly_filtered,
@@ -1341,17 +1473,9 @@ def update_chart(
             y=selected_metric,
             title=f"Monthly {selected_metric} — {selected_country}",
             template=chart_template,
-            labels={
-                "Month": "Month",
-                selected_metric: labels[selected_metric],
-            },
-            custom_data=[
-                "Revenue",
-                "Orders",
-                "Average Order Value",
-            ],
+            labels={"Month": "Month", selected_metric: labels[selected_metric]},
+            custom_data=["Revenue", "Orders", "Average Order Value"],
         )
-
         fig.update_traces(
             hovertemplate=(
                 "<b>Month: %{x|%B %Y}</b><br>"
@@ -1363,25 +1487,11 @@ def update_chart(
             hoverlabel={
                 "bgcolor": "#14213d",
                 "bordercolor": "#203f72",
-                "font": {
-                    "family": "Arial, sans-serif",
-                    "size": 13,
-                    "color": "#ffffff",
-                },
+                "font": {"family": "Arial, sans-serif", "size": 13, "color": "#ffffff"},
             },
         )
-
-        fig.update_xaxes(
-            showgrid=False,
-            tickformat="%b %Y",
-            dtick="M1",
-            ticklabelmode="period",
-        )
-        fig.update_yaxes(
-            gridcolor="#e9edf5",
-            rangemode="tozero",
-        )
-
+        fig.update_xaxes(showgrid=False, tickformat="%b %Y", dtick="M1", ticklabelmode="period")
+        fig.update_yaxes(gridcolor="#e9edf5", rangemode="tozero")
     fig.update_layout(
         title_x=0.02,
         margin={"l": 45, "r": 25, "t": 70, "b": 45},
@@ -1390,69 +1500,38 @@ def update_chart(
         font={"family": "Arial, sans-serif", "color": "#172033"},
     )
 
-
-    # Prepare product metrics for the selected country and date range.
     products_filtered = (
         filtered_sales.groupby("Product", as_index=False)
-        .agg(
-            Revenue=("Revenue", "sum"),
-            Quantity_Sold=("Quantity", "sum"),
-        )
+        .agg(Revenue=("Revenue", "sum"), Quantity_Sold=("Quantity", "sum"))
     )
-
-    # Calculate weighted average selling price per product.
     products_filtered["Average_Selling_Price"] = (
         products_filtered["Revenue"]
-        / products_filtered["Quantity_Sold"].where(
-            products_filtered["Quantity_Sold"] != 0
-        )
+        / products_filtered["Quantity_Sold"].where(products_filtered["Quantity_Sold"] != 0)
     )
 
-    # Map the selected metric to its data column and chart labels.
     product_metric_config = {
-        "Revenue": {
-            "column": "Revenue",
-            "axis_label": "Revenue (£)",
-            "title": "Revenue",
-        },
-        "Units Sold": {
-            "column": "Quantity_Sold",
-            "axis_label": "Units sold",
-            "title": "Units Sold",
-        },
+        "Revenue": {"column": "Revenue", "axis_label": "Revenue (£)", "title": "Revenue"},
+        "Units Sold": {"column": "Quantity_Sold", "axis_label": "Units sold", "title": "Units Sold"},
         "Average Selling Price": {
             "column": "Average_Selling_Price",
             "axis_label": "Average selling price (£)",
             "title": "Average Selling Price",
         },
     }
-
-    product_config = product_metric_config.get(
-        selected_product_metric,
-        product_metric_config["Revenue"],
-    )
+    product_config = product_metric_config.get(selected_product_metric, product_metric_config["Revenue"])
     product_column = product_config["column"]
     product_axis_label = product_config["axis_label"]
     product_title = product_config["title"]
 
-    # Keep only valid values, then select the top 10 for the chosen metric.
     valid_products = products_filtered.dropna(subset=[product_column])
-
     products_filtered = (
-        valid_products.sort_values(
-            product_column,
-            ascending=False,
-        )
+        valid_products.sort_values(product_column, ascending=False)
         .head(10)
         .sort_values(product_column, ascending=True)
     )
 
-    # Show a useful empty state when the selected metric has no usable data.
     if products_filtered.empty or products_filtered[product_column].sum() <= 0:
-        product_fig = px.bar(
-            title=f"No product data available — {selected_country}",
-            template=chart_template,
-        )
+        product_fig = px.bar(title=f"No product data available — {selected_country}", template=chart_template)
         product_fig.add_annotation(
             text="Try selecting a different country or date range.",
             xref="paper",
@@ -1479,15 +1558,9 @@ def update_chart(
                 "Average_Selling_Price": "Average selling price (£)",
             },
             template=chart_template,
-            hover_data={
-                "Revenue": ":.2f",
-                "Quantity_Sold": True,
-            },
+            hover_data={"Revenue": ":.2f", "Quantity_Sold": True},
         )
-        product_fig.update_xaxes(
-            gridcolor="#e9edf5",
-            rangemode="tozero",
-        )
+        product_fig.update_xaxes(gridcolor="#e9edf5", rangemode="tozero")
     product_fig.update_layout(
         title_x=0.02,
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
@@ -1497,22 +1570,16 @@ def update_chart(
         yaxis={"categoryorder": "total ascending"},
     )
 
-
-    # Compare countries using the selected date range.
-    # Ignore the country selector here so all countries remain comparable.
     country_sales = sales
-
     if start_date:
         country_sales = country_sales.loc[
             country_sales["InvoiceDate"] >= pd.Timestamp(start_date)
         ]
-
     if end_date:
         end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
         country_sales = country_sales.loc[
             country_sales["InvoiceDate"] < end_exclusive
         ]
-
 
     country_performance = (
         country_sales.groupby("Country", as_index=False)
@@ -1521,13 +1588,8 @@ def update_chart(
         .head(10)
         .sort_values("Revenue", ascending=True)
     )
-
-
     if country_performance.empty or country_performance["Revenue"].sum() <= 0:
-        country_fig = px.bar(
-            title="No country revenue available for this date range",
-            template=chart_template,
-        )
+        country_fig = px.bar(title="No country revenue available for this date range", template=chart_template)
         country_fig.add_annotation(
             text="Try selecting a different date range.",
             xref="paper",
@@ -1546,14 +1608,9 @@ def update_chart(
             y="Country",
             orientation="h",
             title="Top 10 Countries by Revenue",
-            labels={
-                "Revenue": "Revenue (£)",
-                "Country": "Country",
-            },
+            labels={"Revenue": "Revenue (£)", "Country": "Country"},
             template=chart_template,
         )
-
-
     country_fig.update_layout(
         title_x=0.02,
         margin={"l": 20, "r": 20, "t": 60, "b": 20},
@@ -1562,37 +1619,20 @@ def update_chart(
         font={"family": "Arial, sans-serif", "color": "#172033"},
         yaxis={"categoryorder": "total ascending"},
     )
-
-    country_fig.update_xaxes(
-        gridcolor="#e9edf5",
-        rangemode="tozero",
-    )
-
-    # Calculate each country's share of total revenue
-    # for the selected date range.
+    country_fig.update_xaxes(gridcolor="#e9edf5", rangemode="tozero")
 
     country_contribution = (
         country_sales.groupby("Country", as_index=False)
         .agg(Revenue=("Revenue", "sum"))
     )
-
     total_country_revenue = country_contribution["Revenue"].sum()
-
     if not country_contribution.empty and total_country_revenue > 0:
         country_contribution["Revenue Share (%)"] = (
-            country_contribution["Revenue"]
-            / total_country_revenue
-            * 100
+            country_contribution["Revenue"] / total_country_revenue * 100
         )
-
-        country_contribution = (
-            country_contribution.sort_values(
-                "Revenue Share (%)",
-                ascending=False,
-            )
-            .head(10)
-        )
-
+        country_contribution = country_contribution.sort_values(
+            "Revenue Share (%)", ascending=False
+        ).head(10)
         contribution_fig = px.pie(
             country_contribution,
             names="Country",
@@ -1601,7 +1641,6 @@ def update_chart(
             template=chart_template,
             hole=0.45,
         )
-
         contribution_fig.update_traces(
             textposition="outside",
             textinfo="none",
@@ -1613,7 +1652,6 @@ def update_chart(
                 "<extra></extra>"
             ),
         )
-
     else:
         contribution_fig = px.pie(
             title="No revenue contribution available for this date range",
@@ -1632,19 +1670,17 @@ def update_chart(
         contribution_fig.update_xaxes(visible=False)
         contribution_fig.update_yaxes(visible=False)
 
-
     contribution_fig.update_layout(
-    title_x=0.02,
-    margin={"l": 20, "r": 20, "t": 60, "b": 20},
-    paper_bgcolor="white",
-    plot_bgcolor="white",
-    font={"family": "Arial, sans-serif", "color": "#172033"},
-    showlegend=True,
-    uniformtext_minsize=10,
-    uniformtext_mode="hide",
-)
+        title_x=0.02,
+        margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font={"family": "Arial, sans-serif", "color": "#172033"},
+        showlegend=True,
+        uniformtext_minsize=10,
+        uniformtext_mode="hide",
+    )
 
-    # Apply consistent styling to all dashboard charts.
     fig = apply_chart_theme(fig)
     product_fig = apply_chart_theme(product_fig)
     country_fig = apply_chart_theme(country_fig)
@@ -1654,22 +1690,151 @@ def update_chart(
         fig,
         f"£{revenue:,.2f}",
         f"{orders:,}",
-        f"{units_sold:,.0f}",
-        f"{unique_customers:,}",
-        f"{repeat_customers:,}",
-        f"{repeat_customer_rate:.1f}%",
         f"£{average_value:,.2f}",
         monthly_growth,
         product_fig,
         country_fig,
         contribution_fig,
         customer_orders_fig,
+        f"{repeat_customers:,}",
+        f"{repeat_customer_rate:.1f}%",
+        f"{units_sold:,.0f}",
+        f"{unique_customers:,}",
         top_country,
+    )
+
+
+@app.callback(
+    Output("top-product-value", "children"),
+    Output("best-month-value", "children"),
+    Output("top-country-revenue", "children"),
+    Output("top-product-revenue", "children"),
+    Output("best-month-revenue", "children"),
+    Output("top-customer-value", "children"),
+    Output("top-customer-revenue", "children"),
+    Output("country-concentration-value", "children"),
+    Output("customer-contribution-value", "children"),
+    Output("product-concentration-value", "children"),
+    Output("business-insight-summary", "children"),
+    Input("view-selector", "value"),
+    Input("product-metric-selector", "value"),
+    Input("country-selector", "value"),
+    Input("start-date", "date"),
+    Input("end-date", "date"),
+)
+def update_summary_cards(
+    selected_metric,
+    selected_product_metric,
+    selected_country,
+    start_date,
+    end_date,
+):
+    if selected_country == "All":
+        filtered_sales = sales
+    else:
+        filtered_sales = sales.loc[sales["Country"] == selected_country]
+
+    if start_date:
+        filtered_sales = filtered_sales.loc[
+            filtered_sales["InvoiceDate"] >= pd.Timestamp(start_date)
+        ]
+    if end_date:
+        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        filtered_sales = filtered_sales.loc[
+            filtered_sales["InvoiceDate"] < end_exclusive
+        ]
+
+    country_revenue = filtered_sales.groupby("Country")["Revenue"].sum().sort_values(ascending=False)
+    product_revenue = filtered_sales.groupby("Product")["Revenue"].sum().sort_values(ascending=False)
+    customer_revenue = (
+        filtered_sales.dropna(subset=["CustomerID"])
+        .groupby("CustomerID")["Revenue"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+    monthly_revenue = (
+        filtered_sales.groupby(filtered_sales["InvoiceDate"].dt.to_period("M").dt.to_timestamp())["Revenue"]
+        .sum()
+        .sort_index()
+    )
+
+    total_revenue = filtered_sales["Revenue"].sum()
+    top_country = country_revenue.index[0] if not country_revenue.empty else "N/A"
+    top_product = product_revenue.index[0] if not product_revenue.empty else "N/A"
+    best_month = monthly_revenue.idxmax().strftime("%B %Y") if not monthly_revenue.empty else "N/A"
+    top_customer = int(customer_revenue.index[0]) if not customer_revenue.empty else "N/A"
+    top_customer_revenue = customer_revenue.iloc[0] if not customer_revenue.empty else 0
+    top_country_revenue = country_revenue.iloc[0] if not country_revenue.empty else 0
+    top_product_revenue = product_revenue.iloc[0] if not product_revenue.empty else 0
+
+    country_share = (top_country_revenue / total_revenue * 100) if total_revenue else 0
+    customer_share = (top_customer_revenue / total_revenue * 100) if total_revenue else 0
+    product_share = (top_product_revenue / total_revenue * 100) if total_revenue else 0
+
+    customer_counts = (
+        filtered_sales.dropna(subset=["CustomerID"])
+        .groupby("CustomerID")["InvoiceNo"]
+        .nunique()
+    )
+    repeat_customers = int((customer_counts > 1).sum()) if not customer_counts.empty else 0
+    identified_customers = int(customer_counts.shape[0]) if not customer_counts.empty else 0
+    repeat_rate = (
+        repeat_customers / identified_customers * 100 if identified_customers else 0
+    )
+
+    monthly_growth = "N/A"
+    if not monthly_revenue.empty:
+        monthly_calendar = monthly_revenue.asfreq("MS", fill_value=0)
+        if len(monthly_calendar) >= 2:
+            previous_revenue = monthly_calendar.iloc[-2]
+            current_revenue = monthly_calendar.iloc[-1]
+            if previous_revenue > 0:
+                growth_percent = ((current_revenue - previous_revenue) / previous_revenue) * 100
+                monthly_growth = f"{growth_percent:+.2f}%"
+            elif current_revenue > 0:
+                monthly_growth = "New sales"
+            else:
+                monthly_growth = "0.00%"
+
+    narrative = [
+        html.P(
+            f"{top_country} accounts for {country_share:.1f}% of current revenue, contributing £{top_country_revenue:,.2f} to the filtered view.",
+            style={"margin": "0 0 8px 0"},
+        )
+    ]
+    if top_product != "N/A":
+        narrative.append(
+            html.P(
+                f"{top_product} is the leading product by revenue, contributing {product_share:.1f}% of gross sales (£{top_product_revenue:,.2f}).",
+                style={"margin": "0 0 8px 0"},
+            )
+        )
+    if identified_customers:
+        narrative.append(
+            html.P(
+                f"Repeat-customer activity is {repeat_rate:.1f}% ({repeat_customers} of {identified_customers} identified customers), indicating {repeat_rate:.1f}% of customers purchased more than once in the current selection.",
+                style={"margin": "0 0 8px 0"},
+            )
+        )
+    narrative.append(
+        html.P(
+            f"Revenue momentum: the latest month is {monthly_growth} versus the prior month, with the strongest month at {best_month}.",
+            style={"margin": "0"},
+        )
+    )
+
+    return (
         top_product,
         best_month,
         f"Revenue: £{top_country_revenue:,.2f}",
         f"Revenue: £{top_product_revenue:,.2f}",
-        f"Revenue: £{best_month_revenue:,.2f}",
+        f"Revenue: £{monthly_revenue.max() if not monthly_revenue.empty else 0:,.2f}",
+        f"Customer {top_customer}" if top_customer != "N/A" else "N/A",
+        f"Revenue: £{top_customer_revenue:,.2f}" if top_customer != "N/A" else "Revenue: £0.00",
+        f"{country_share:.1f}% of gross sales",
+        f"{customer_share:.1f}% of gross sales" if top_customer != "N/A" else "No identifiable customer data",
+        f"{product_share:.1f}% of gross sales",
+        narrative,
     )
 
 
@@ -1745,6 +1910,189 @@ def export_filtered_csv(n_clicks, selected_country, start_date, end_date):
         encoding="utf-8-sig",
     )
 
+
+
+@app.callback(
+    Output("cross-sell-chart", "figure"),
+    Output("cross-sell-summary", "children"),
+    Input("country-selector", "value"),
+    Input("start-date", "date"),
+    Input("end-date", "date"),
+)
+def update_cross_sell(selected_country, start_date, end_date):
+    """Calculate basket co-purchase patterns for the current filter selection."""
+    mask = pd.Series(True, index=sales.index)
+
+    if selected_country != "All":
+        mask &= sales["Country"].eq(selected_country)
+
+    if start_date:
+        mask &= sales["InvoiceDate"] >= pd.Timestamp(start_date)
+
+    if end_date:
+        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        mask &= sales["InvoiceDate"] < end_exclusive
+
+    filtered_sales = sales.loc[mask].copy()
+    pair_data = build_product_associations(filtered_sales, max_pairs=8)
+
+    if pair_data.empty:
+        fig = px.bar(
+            title="No co-purchase patterns available for this selection",
+            template=chart_template,
+        )
+        fig.add_annotation(
+            text="Try selecting a different country or date range.",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font={"size": 14, "color": "#64748b"},
+        )
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        summary_content = html.P(
+            "No repeated product pairs were observed in the current filtered view.",
+            style={"margin": "0"},
+        )
+        return fig, summary_content
+
+    top_pair = summarize_top_product_pair(filtered_sales, max_pairs=8)
+    pair_chart = pair_data.head(8).sort_values("CoPurchaseCount", ascending=True)
+    fig = px.bar(
+        pair_chart,
+        x="CoPurchaseCount",
+        y="ProductPair",
+        orientation="h",
+        title="Most Common Product Pairs",
+        labels={
+            "ProductPair": "Product pair",
+            "CoPurchaseCount": "Co-purchase count",
+        },
+        template=chart_template,
+        color="CoPurchaseCount",
+        color_continuous_scale="Blues",
+    )
+    fig.update_layout(
+        title_x=0.02,
+        margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font={"family": "Arial, sans-serif", "color": "#172033"},
+        yaxis={"categoryorder": "total ascending"},
+    )
+    fig.update_xaxes(gridcolor="#e9edf5", rangemode="tozero")
+
+    summary_content = [
+        html.P(
+            f"Strongest pair: {top_pair['pair_name']} ({top_pair['count']} co-purchases, {top_pair['support']:.1f}% support)",
+            style={"margin": "0 0 8px 0"},
+        ),
+        html.P(
+            "This view tracks recurring item bundles purchased within the same invoice, which can indicate natural cross-sell opportunities.",
+            style={"margin": "0"},
+        ),
+    ]
+    return fig, summary_content
+
+
+@app.callback(
+    Output("customer-insights-chart", "figure"),
+    Output("customer-insights-summary", "children"),
+    Input("country-selector", "value"),
+    Input("start-date", "date"),
+    Input("end-date", "date"),
+)
+def update_customer_insights(selected_country, start_date, end_date):
+    """Show top customer accounts for the current filtered data slice."""
+    mask = pd.Series(True, index=sales.index)
+
+    if selected_country != "All":
+        mask &= sales["Country"].eq(selected_country)
+
+    if start_date:
+        mask &= sales["InvoiceDate"] >= pd.Timestamp(start_date)
+
+    if end_date:
+        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        mask &= sales["InvoiceDate"] < end_exclusive
+
+    filtered_sales = sales.loc[mask].copy()
+    customer_summary = build_customer_value_summary(filtered_sales, top_n=10)
+
+    if customer_summary.empty:
+        fig = px.bar(
+            title="No customer revenue data available for this selection",
+            template=chart_template,
+        )
+        fig.add_annotation(
+            text="Try selecting a different country or date range.",
+            xref="paper",
+            yref="paper",
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            font={"size": 14, "color": "#64748b"},
+        )
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        summary_content = html.P(
+            "No identifiable customer data is available in the current filtered view.",
+            style={"margin": "0"},
+        )
+        return fig, summary_content
+
+    summary = summarize_top_customers(filtered_sales, top_n=5)
+    chart_data = customer_summary.head(10).sort_values("TotalRevenue", ascending=True)
+    fig = px.bar(
+        chart_data,
+        x="TotalRevenue",
+        y="CustomerID",
+        orientation="h",
+        title="Top Customers by Revenue",
+        labels={
+            "CustomerID": "Customer ID",
+            "TotalRevenue": "Revenue (£)",
+        },
+        template=chart_template,
+        text="TotalRevenue",
+        color="TotalRevenue",
+        color_continuous_scale="Teal",
+    )
+    fig.update_traces(
+        texttemplate="£%{text:,.0f}",
+        textposition="outside",
+        hovertemplate=(
+            "<b>Customer %{y}</b><br>"
+            "Revenue: £%{x:,.2f}<br>"
+            "Invoices: %{customdata[0]:,.0f}<br>"
+            "Average order value: £%{customdata[1]:,.2f}"
+            "<extra></extra>"
+        ),
+        customdata=chart_data[["InvoiceCount", "AverageOrderValue"]].to_numpy(),
+    )
+    fig.update_layout(
+        title_x=0.02,
+        margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        font={"family": "Arial, sans-serif", "color": "#172033"},
+        yaxis={"categoryorder": "total ascending"},
+    )
+    fig.update_xaxes(gridcolor="#e9edf5", rangemode="tozero")
+
+    summary_content = [
+        html.P(
+            f"Top customer: Customer {summary['top_customer']} with £{summary['top_revenue']:,.2f} in revenue and £{summary['avg_order_value']:,.2f} average order value.",
+            style={"margin": "0 0 8px 0"},
+        ),
+        html.P(
+            f"The top {summary['customer_count']} customer accounts shown here account for the strongest value concentration in the current selection.",
+            style={"margin": "0"},
+        ),
+    ]
+    return fig, summary_content
 
 
 @app.callback(
