@@ -172,6 +172,8 @@ The latest verified test run reported **126 passed tests and one non-blocking wa
 
 The tests cover data validation, transaction classification, CSV/XLSX upload handling, generic dataset profiling and quality findings, universal statistics, grouping, correlation, and trend analysis, upload-to-dashboard data selection, KPI calculations, country and date filtering, reset behavior, Visual Explorer aggregation/type checks, and raw/grouped CSV exports.
 
+GitHub Actions also builds the Docker image for pull requests and `main` changes to container or application inputs. The workflow validates the image without publishing it to a registry.
+
 ## 🗺️ Project Roadmap
 
 Planned and implemented enhancements include:
