@@ -4,36 +4,171 @@
    Milestone 1: Visual foundation only
    ========================================================= */
 
+
+/* =========================================================
+   RetailPulse AI — Premium Enterprise Design System
+   Phase 1A: Global design foundation
+   ========================================================= */
+
 :root {
     color-scheme: dark;
 
-    --rp-navy: #0b1220;
-    --rp-navy-light: #141e30;
-    --rp-blue: #79a8ff;
-    --rp-blue-hover: #9abaff;
-    --rp-blue-soft: rgba(121, 168, 255, 0.14);
-    --rp-teal: #43d9c5;
+    /* -----------------------------------------------------
+       01. Core colour palette
+       ----------------------------------------------------- */
 
-    --rp-page: #080d16;
-    --rp-surface: #111a29;
-    --rp-surface-muted: #151f2f;
+    --rp-color-canvas: #080c14;
+    --rp-color-shell: #0b111d;
+    --rp-color-sidebar: #0a101b;
 
-    --rp-text: #edf3fc;
-    --rp-text-secondary: #a7b5ca;
-    --rp-text-subtle: #8292aa;
+    --rp-color-surface: #111a29;
+    --rp-color-surface-raised: #162235;
+    --rp-color-surface-overlay: #1b2940;
+    --rp-color-surface-muted: #131e2e;
 
-    --rp-border: #26364c;
-    --rp-border-strong: #3a4d67;
+    --rp-color-primary: #83adff;
+    --rp-color-primary-hover: #a5c3ff;
+    --rp-color-primary-strong: #5c8ff0;
+    --rp-color-primary-soft: rgba(131, 173, 255, 0.12);
 
+    --rp-color-cyan: #55d9d0;
+    --rp-color-violet: #a99aff;
+
+    --rp-color-success: #57d6a0;
+    --rp-color-warning: #f0bd72;
+    --rp-color-danger: #ff858e;
+
+    /* -----------------------------------------------------
+       02. Text hierarchy
+       ----------------------------------------------------- */
+
+    --rp-color-text-primary: #f0f4fc;
+    --rp-color-text-secondary: #a8b7cc;
+    --rp-color-text-muted: #8192aa;
+    --rp-color-text-disabled: #65758c;
+
+    /* -----------------------------------------------------
+       03. Borders and separators
+       ----------------------------------------------------- */
+
+    --rp-color-border-subtle: rgba(148, 163, 184, 0.10);
+    --rp-color-border: #293950;
+    --rp-color-border-strong: #3a506e;
+    --rp-color-border-focus: #83adff;
+
+    /* -----------------------------------------------------
+       04. Typography
+       ----------------------------------------------------- */
+
+    --rp-font-sans:
+        "Inter",
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    --rp-font-mono:
+        "Cascadia Code",
+        "Consolas",
+        monospace;
+
+    --rp-font-size-xs: 10px;
+    --rp-font-size-sm: 12px;
+    --rp-font-size-md: 14px;
+    --rp-font-size-lg: 16px;
+    --rp-font-size-xl: 20px;
+    --rp-font-size-2xl: 28px;
+
+    --rp-font-weight-normal: 400;
+    --rp-font-weight-medium: 500;
+    --rp-font-weight-semibold: 600;
+    --rp-font-weight-bold: 700;
+    --rp-font-weight-heavy: 750;
+
+    /* -----------------------------------------------------
+       05. Spacing scale
+       ----------------------------------------------------- */
+
+    --rp-space-1: 4px;
+    --rp-space-2: 8px;
+    --rp-space-3: 12px;
+    --rp-space-4: 16px;
+    --rp-space-5: 20px;
+    --rp-space-6: 24px;
+    --rp-space-8: 32px;
+    --rp-space-10: 40px;
+    --rp-space-12: 48px;
+
+    /* -----------------------------------------------------
+       06. Radius system
+       ----------------------------------------------------- */
+
+    --rp-radius-xs: 5px;
     --rp-radius-sm: 8px;
     --rp-radius-md: 12px;
     --rp-radius-lg: 16px;
+    --rp-radius-xl: 20px;
+    --rp-radius-pill: 999px;
 
-    --rp-shadow-card: 0 8px 28px rgba(0, 0, 0, 0.2),
-                      0 1px 2px rgba(0, 0, 0, 0.28);
+    /* -----------------------------------------------------
+       07. Elevation and depth
+       ----------------------------------------------------- */
 
-    --rp-shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.3);
+    --rp-shadow-card:
+        0 8px 28px rgba(0, 0, 0, 0.22),
+        0 1px 2px rgba(0, 0, 0, 0.30);
+
+    --rp-shadow-hover:
+        0 14px 36px rgba(0, 0, 0, 0.32),
+        0 2px 6px rgba(0, 0, 0, 0.20);
+
+    --rp-shadow-overlay:
+        0 24px 64px rgba(0, 0, 0, 0.45);
+
+    --rp-shadow-focus:
+        0 0 0 3px rgba(131, 173, 255, 0.22);
+
+    /* -----------------------------------------------------
+       08. Motion
+       ----------------------------------------------------- */
+
+    --rp-motion-fast: 140ms ease;
+    --rp-motion-normal: 200ms ease;
+    --rp-motion-slow: 300ms ease;
+
+    /* -----------------------------------------------------
+       09. Layout
+       ----------------------------------------------------- */
+
+    --rp-sidebar-width: 264px;
+    --rp-topbar-height: 64px;
+    --rp-content-max-width: 1600px;
+
+    /* -----------------------------------------------------
+       10. Legacy compatibility aliases
+       Existing pages continue using these names.
+       ----------------------------------------------------- */
+
+    --rp-navy: var(--rp-color-shell);
+    --rp-navy-light: #17243a;
+
+    --rp-blue: var(--rp-color-primary);
+    --rp-blue-hover: var(--rp-color-primary-hover);
+    --rp-blue-soft: var(--rp-color-primary-soft);
+
+    --rp-teal: var(--rp-color-cyan);
+
+    --rp-page: var(--rp-color-canvas);
+    --rp-surface: var(--rp-color-surface);
+    --rp-surface-muted: var(--rp-color-surface-muted);
+
+    --rp-text: var(--rp-color-text-primary);
+    --rp-text-secondary: var(--rp-color-text-secondary);
+    --rp-text-subtle: var(--rp-color-text-muted);
+
+    --rp-border: var(--rp-color-border);
+    --rp-border-strong: var(--rp-color-border-strong);
 }
+
 
 /* -------------------------
    Global foundation
@@ -2031,5 +2166,395 @@ footer {
     .rp-overview-card {
         min-height: 196px;
         padding: 17px;
+    }
+}
+
+
+/* =========================================================
+   RETAILPULSE AI — PHASE 1B
+   Premium application shell and navigation
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   01. Desktop application shell
+   --------------------------------------------------------- */
+
+.rp-app-shell {
+    background: var(--rp-color-canvas);
+}
+
+.rp-app-frame {
+    background:
+        radial-gradient(
+            ellipse at 80% 0%,
+            rgba(70, 105, 170, 0.055),
+            transparent 42%
+        ),
+        var(--rp-color-canvas);
+}
+
+/* ---------------------------------------------------------
+   02. Sidebar
+   --------------------------------------------------------- */
+
+.rp-sidebar {
+    width: var(--rp-sidebar-width);
+    min-width: var(--rp-sidebar-width);
+    padding: 25px 16px 18px;
+
+    border-right: 1px solid var(--rp-color-border-subtle);
+
+    background:
+        radial-gradient(
+            ellipse at 0% 0%,
+            rgba(82, 126, 201, 0.12),
+            transparent 38%
+        ),
+        linear-gradient(
+            180deg,
+            #0c1422 0%,
+            #0a101b 100%
+        );
+
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------------------------------------------------------
+   03. Brand identity
+   --------------------------------------------------------- */
+
+.rp-brand {
+    gap: 12px;
+}
+
+.rp-brand-mark {
+    width: 42px;
+    height: 42px;
+
+    border: 1px solid rgba(131, 173, 255, 0.42);
+    border-radius: 13px;
+
+    background:
+        radial-gradient(
+            circle at 25% 15%,
+            rgba(173, 202, 255, 0.22),
+            transparent 55%
+        ),
+        linear-gradient(
+            145deg,
+            #274779,
+            #142541 72%
+        );
+
+    color: #edf4ff;
+
+    box-shadow:
+        0 5px 16px rgba(36, 80, 148, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+    font-size: 13px;
+    letter-spacing: 0.055em;
+}
+
+.rp-brand-copy {
+    gap: 4px;
+}
+
+.rp-brand-copy strong {
+    font-size: 17px;
+    font-weight: 750;
+    letter-spacing: -0.035em;
+}
+
+.rp-brand-copy small {
+    font-size: 9px;
+    letter-spacing: 0.17em;
+}
+
+/* ---------------------------------------------------------
+   04. Navigation hierarchy
+   --------------------------------------------------------- */
+
+.rp-nav-section-label {
+    margin: 31px 10px 11px;
+
+    color: #8497b2;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.17em;
+}
+
+.rp-navigation {
+    gap: 5px;
+}
+
+.rp-nav-link {
+    position: relative;
+
+    min-height: 43px;
+    padding: 10px 12px 10px 15px;
+
+    border: 1px solid transparent;
+    border-radius: 9px;
+
+    color: #aab9ce;
+
+    font-size: 12px;
+    font-weight: 550;
+    letter-spacing: 0.005em;
+
+    transition:
+        background-color var(--rp-motion-normal),
+        border-color var(--rp-motion-normal),
+        color var(--rp-motion-normal),
+        transform var(--rp-motion-normal);
+}
+
+.rp-nav-link:hover {
+    border-color: rgba(148, 163, 184, 0.12);
+
+    background: rgba(255, 255, 255, 0.045);
+
+    color: #f0f5ff;
+
+    transform: translateX(2px);
+}
+
+/* Active route indicator */
+
+.rp-nav-link-active,
+.rp-nav-link-active:hover {
+    border-color: rgba(131, 173, 255, 0.23);
+
+    background:
+        linear-gradient(
+            100deg,
+            rgba(78, 122, 195, 0.23),
+            rgba(78, 122, 195, 0.09)
+        );
+
+    color: #f1f6ff;
+
+    font-weight: 650;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.035),
+        0 3px 12px rgba(0, 0, 0, 0.10);
+
+    transform: none;
+}
+
+.rp-nav-link-active::before {
+    position: absolute;
+
+    top: 9px;
+    bottom: 9px;
+    left: 0;
+
+    width: 3px;
+
+    border-radius: 0 4px 4px 0;
+
+    background: var(--rp-color-primary);
+
+    box-shadow: 0 0 12px rgba(131, 173, 255, 0.48);
+
+    content: "";
+}
+
+/* Planned capabilities */
+
+.rp-nav-planned {
+    color: #718198;
+    opacity: 0.76;
+    cursor: default;
+}
+
+.rp-nav-planned:hover {
+    border-color: transparent;
+    background: transparent;
+    color: #718198;
+    transform: none;
+}
+
+.rp-nav-planned::before {
+    display: none;
+}
+
+.rp-planned-badge {
+    padding: 3px 7px;
+
+    border-color: rgba(129, 146, 170, 0.20);
+
+    background: rgba(129, 146, 170, 0.045);
+
+    color: #8090a7;
+
+    font-size: 8px;
+    letter-spacing: 0.09em;
+}
+
+/* ---------------------------------------------------------
+   05. Sidebar footer
+   --------------------------------------------------------- */
+
+.rp-sidebar-footer {
+    margin-top: auto;
+    padding: 16px 10px 5px;
+
+    border-top-color: rgba(148, 163, 184, 0.12);
+
+    color: #8798af;
+
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+/* ---------------------------------------------------------
+   06. Top workspace header
+   --------------------------------------------------------- */
+
+.rp-topbar {
+    min-height: var(--rp-topbar-height);
+    padding: 11px 28px;
+
+    border-bottom: 1px solid var(--rp-color-border-subtle);
+
+    background: rgba(8, 13, 22, 0.91);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.rp-topbar-eyebrow {
+    margin-bottom: 3px;
+
+    color: #8597b0;
+
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.15em;
+}
+
+.rp-topbar strong {
+    color: #eef3fc;
+
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.rp-topbar-action {
+    min-height: 37px;
+    padding: 8px 13px;
+
+    border: 1px solid rgba(131, 173, 255, 0.26);
+    border-radius: 9px;
+
+    background: rgba(131, 173, 255, 0.085);
+
+    color: #dce9ff;
+
+    font-size: 11px;
+    font-weight: 650;
+
+    transition:
+        background-color var(--rp-motion-normal),
+        border-color var(--rp-motion-normal),
+        box-shadow var(--rp-motion-normal);
+}
+
+.rp-topbar-action:hover {
+    border-color: rgba(131, 173, 255, 0.48);
+
+    background: rgba(131, 173, 255, 0.15);
+
+    box-shadow: 0 4px 14px rgba(49, 93, 158, 0.12);
+}
+
+/* ---------------------------------------------------------
+   07. Mobile navigation
+   --------------------------------------------------------- */
+
+@media (max-width: 760px) {
+    .rp-mobile-header {
+        min-height: 66px;
+        padding: 11px 18px;
+
+        border-bottom: 1px solid var(--rp-color-border-subtle);
+
+        background: rgba(9, 15, 26, 0.96);
+
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .rp-mobile-menu summary {
+        min-width: 76px;
+        min-height: 38px;
+
+        padding: 9px 13px;
+
+        border: 1px solid var(--rp-color-border-strong);
+        border-radius: 9px;
+
+        background: rgba(131, 173, 255, 0.06);
+
+        color: #e5edfc;
+
+        font-size: 12px;
+        font-weight: 650;
+
+        transition:
+            background-color var(--rp-motion-normal),
+            border-color var(--rp-motion-normal);
+    }
+
+    .rp-mobile-menu summary:hover {
+        border-color: var(--rp-color-primary);
+
+        background: var(--rp-color-primary-soft);
+    }
+
+    .rp-mobile-menu[open] summary {
+        border-color: rgba(131, 173, 255, 0.48);
+
+        background: rgba(131, 173, 255, 0.13);
+    }
+
+    .rp-mobile-panel {
+        width: min(340px, calc(100vw - 24px));
+
+        padding: 12px;
+
+        border: 1px solid var(--rp-color-border);
+        border-radius: 13px;
+
+        background: #0e1726;
+
+        box-shadow: var(--rp-shadow-overlay);
+    }
+
+    .rp-mobile-panel .rp-nav-link {
+        min-height: 44px;
+    }
+}
+
+/* ---------------------------------------------------------
+   08. Accessibility and motion
+   --------------------------------------------------------- */
+
+.rp-nav-link:focus-visible,
+.rp-topbar-action:focus-visible,
+.rp-mobile-menu summary:focus-visible {
+    outline: 2px solid var(--rp-color-border-focus);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rp-nav-link,
+    .rp-topbar-action,
+    .rp-mobile-menu summary {
+        transition: none !important;
     }
 }
