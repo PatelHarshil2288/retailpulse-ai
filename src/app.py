@@ -4,6 +4,8 @@ from pathlib import Path
 import pandas as pd
 import plotly.express as px
 from dash import Dash, dcc, html, Input, Output, State, callback_context
+from dash.exceptions import PreventUpdate
+from src.data_processing import REQUIRED_COLUMNS
 from src.revenue_forecasting import (
     create_revenue_forecast,
     evaluate_forecasting_models,
@@ -22,6 +24,49 @@ from src.customer_insights import (
     build_customer_value_summary,
     summarize_top_customers,
 )
+from src.data_profiling import profile_dataset
+from src.universal_analytics import (
+    AGGREGATIONS as UNIVERSAL_AGGREGATIONS,
+    NUMERIC_AGGREGATIONS,
+    ROW_COUNT_MEASURE,
+    aggregate_dataset,
+    analysis_control_options,
+    build_analysis_recommendations,
+    build_correlation_figure,
+    build_empty_figure,
+    build_trend_figure,
+    build_universal_figure,
+    filter_dataset,
+    profile_workspace_payload,
+)
+from src.pages.overview import build_not_found_page, build_overview_page
+from src.pages.data_workspace import (
+    build_dataset_upload_results,
+    build_data_workspace_page,
+    deserialize_dashboard_sales,
+    deserialize_workspace_dataset,
+    list_uploaded_worksheet_names,
+    process_retail_dataset,
+    process_uploaded_dataset,
+    serialize_dashboard_sales,
+    serialize_workspace_dataset,
+)
+from src.pages.quality_lab import (
+    build_dataset_quality_content,
+    build_quality_lab_content,
+    build_quality_lab_page,
+)
+from src.pages.visual_explorer import (
+    AGGREGATIONS,
+    DEFAULT_AGGREGATIONS,
+    MEASURES,
+    aggregate_sales,
+    build_filtered_preview,
+    build_visual_explorer_chart,
+    build_visual_explorer_page,
+    filter_sales,
+)
+from src.ui.shell import build_app_shell
 
 # --------------------------------------------------
 # RetailPulse AI - Real Retail Analytics Dashboard
@@ -178,7 +223,7 @@ top_customer_share = (
     (top_customer_revenue / total_revenue * 100) if total_revenue else 0
 )
 
-chart_template = "plotly_white"
+chart_template = "plotly_dark"
 
 def apply_chart_theme(figure):
     """Apply consistent styling to RetailPulse AI Plotly charts."""
@@ -192,20 +237,20 @@ def apply_chart_theme(figure):
             "font": {
                 "family": chart_font,
                 "size": 17,
-                "color": "#172033",
+                "color": "#edf3fc",
             },
         },
         font={
             "family": chart_font,
             "size": 12,
-            "color": "#475569",
+            "color": "#c3cede",
         },
         hoverlabel={
-            "bgcolor": "#14213d",
-            "bordercolor": "#203f72",
+            "bgcolor": "#0b1220",
+            "bordercolor": "#3a4d67",
             "font": {
                 "family": chart_font,
-                "size": 12,
+                "size": 16,
                 "color": "#ffffff",
             },
             "align": "left",
@@ -214,29 +259,33 @@ def apply_chart_theme(figure):
             "font": {
                 "family": chart_font,
                 "size": 11,
-                "color": "#475569",
+                "color": "#c3cede",
             },
-            "bgcolor": "rgba(255, 255, 255, 0)",
+            "bgcolor": "rgba(17, 26, 41, 0)",
             "borderwidth": 0,
         },
         margin={"l": 55, "r": 24, "t": 70, "b": 45},
-        paper_bgcolor="#ffffff",
-        plot_bgcolor="#ffffff",
+        paper_bgcolor="#111a29",
+        plot_bgcolor="#111a29",
         hovermode="closest",
     )
 
     figure.update_xaxes(
         showline=False,
         zeroline=False,
-        tickfont={"family": chart_font, "size": 11, "color": "#64748b"},
-        title_font={"family": chart_font, "size": 12, "color": "#475569"},
+        gridcolor="#26364c",
+        zerolinecolor="#3a4d67",
+        tickfont={"family": chart_font, "size": 11, "color": "#a7b5ca"},
+        title_font={"family": chart_font, "size": 12, "color": "#c3cede"},
     )
 
     figure.update_yaxes(
         showline=False,
         zeroline=False,
-        tickfont={"family": chart_font, "size": 11, "color": "#64748b"},
-        title_font={"family": chart_font, "size": 12, "color": "#475569"},
+        gridcolor="#26364c",
+        zerolinecolor="#3a4d67",
+        tickfont={"family": chart_font, "size": 11, "color": "#a7b5ca"},
+        title_font={"family": chart_font, "size": 12, "color": "#c3cede"},
     )
 
     figure.update_traces(
@@ -245,7 +294,7 @@ def apply_chart_theme(figure):
             "bordercolor": "#203f72",
             "font": {
                 "family": chart_font,
-                "size": 12,
+                "size": 16,
                 "color": "#ffffff",
             },
         }
@@ -326,22 +375,24 @@ for _, row in customer_segment_profiles.iterrows():
 app = Dash(
     __name__,
     assets_folder="../assets",
+    suppress_callback_exceptions=True,
 )
 server = app.server
 app.title = "RetailPulse AI"
 
 
 card_style = {
-    "background": "white",
+    "background": "var(--rp-surface-muted)",
     "padding": "24px",
     "borderRadius": "18px",
-    "border": "1px solid #e6ebf3",
-    "boxShadow": "0 6px 24px rgba(22, 39, 75, 0.06)",
+    "border": "1px solid var(--rp-border)",
+    "boxShadow": "var(--rp-shadow-card)",
     "transition": "box-shadow 180ms ease",
 }
 
 
 app.layout = html.Div(
+    className="app-shell",
     style={
         "fontFamily": '"Inter", "Segoe UI", Arial, sans-serif',
         "backgroundColor": "#f3f6fc",
@@ -457,6 +508,7 @@ app.layout = html.Div(
                                     "UCI Online Retail  |  "
                                     "December 2010 – November 2011  |  "
                                     "Currency: GBP (£)",
+                                    id="dashboard-dataset-meta",
                                     className="dashboard-hero-meta",
                                 ),
                                 html.P(
@@ -693,28 +745,40 @@ app.layout = html.Div(
                         html.Div(
                             [
                                 html.P("Sales Records"),
-                                html.H3(f"{len(sales):,}"),
+                                html.H3(
+                                    f"{len(sales):,}",
+                                    id="dataset-sales-records",
+                                ),
                             ],
                             style=card_style,
                         ),
                         html.Div(
                             [
                                 html.P("Unique Products"),
-                                html.H3(f"{sales['StockCode'].nunique():,}"),
+                                html.H3(
+                                    f"{sales['StockCode'].nunique():,}",
+                                    id="dataset-unique-products",
+                                ),
                             ],
                             style=card_style,
                         ),
                         html.Div(
                             [
                                 html.P("Countries"),
-                                html.H3(f"{sales['Country'].nunique():,}"),
+                                html.H3(
+                                    f"{sales['Country'].nunique():,}",
+                                    id="dataset-country-count",
+                                ),
                             ],
                             style=card_style,
                         ),
                         html.Div(
                             [
                                 html.P("Customers Identified"),
-                                html.H3(f"{sales['CustomerID'].nunique():,}"),
+                                html.H3(
+                                    f"{sales['CustomerID'].nunique():,}",
+                                    id="dataset-customer-count",
+                                ),
                             ],
                             style=card_style,
                         ),
@@ -746,7 +810,10 @@ app.layout = html.Div(
                         html.Div(
                             [
                                 html.P("Ordinary Sales"),
-                                html.H3(f"{transaction_counts.get('sale', 0):,}"),
+                                html.H3(
+                                    f"{transaction_counts.get('sale', 0):,}",
+                                    id="quality-sale-count",
+                                ),
                             ],
                             style=card_style,
                         ),
@@ -754,7 +821,8 @@ app.layout = html.Div(
                             [
                                 html.P("Cancellations"),
                                 html.H3(
-                                    f"{transaction_counts.get('cancellation', 0):,}"
+                                    f"{transaction_counts.get('cancellation', 0):,}",
+                                    id="quality-cancellation-count",
                                 ),
                             ],
                             style=card_style,
@@ -763,7 +831,8 @@ app.layout = html.Div(
                             [
                                 html.P("Returns / Reversals"),
                                 html.H3(
-                                    f"{transaction_counts.get('return_or_reversal', 0):,}"
+                                    f"{transaction_counts.get('return_or_reversal', 0):,}",
+                                    id="quality-return-count",
                                 ),
                             ],
                             style=card_style,
@@ -772,7 +841,8 @@ app.layout = html.Div(
                             [
                                 html.P("Zero-Price Reviews"),
                                 html.H3(
-                                    f"{transaction_counts.get('zero_price_review', 0):,}"
+                                    f"{transaction_counts.get('zero_price_review', 0):,}",
+                                    id="quality-zero-price-count",
                                 ),
                             ],
                             style=card_style,
@@ -781,7 +851,8 @@ app.layout = html.Div(
                             [
                                 html.P("Negative-Price Reviews"),
                                 html.H3(
-                                    f"{transaction_counts.get('negative_price_review', 0):,}"
+                                    f"{transaction_counts.get('negative_price_review', 0):,}",
+                                    id="quality-negative-price-count",
                                 ),
                             ],
                             style=card_style,
@@ -790,7 +861,8 @@ app.layout = html.Div(
                             [
                                 html.P("Accounting Adjustments"),
                                 html.H3(
-                                    f"{transaction_counts.get('accounting_adjustment', 0):,}"
+                                    f"{transaction_counts.get('accounting_adjustment', 0):,}",
+                                    id="quality-adjustment-count",
                                 ),
                             ],
                             style=card_style,
@@ -799,6 +871,7 @@ app.layout = html.Div(
                 ),
                 html.P(
                     f"Total cleaned records: {total_cleaned_transactions:,}",
+                    id="quality-cleaned-total",
                     style={
                         "color": "#64748b",
                         "marginTop": "16px",
@@ -945,8 +1018,8 @@ app.layout = html.Div(
                     style={
                         "marginTop": "18px",
                         "paddingTop": "18px",
-                        "borderTop": "1px solid #e6ebf3",
-                        "color": "#334155",
+                        "borderTop": "1px solid var(--rp-border)",
+                        "color": "var(--rp-text-secondary)",
                         "fontSize": "14px",
                         "lineHeight": "1.6",
                     },
@@ -1283,6 +1356,926 @@ app.layout = html.Div(
     ],
 )
 
+# Mount the existing retail dashboard unchanged inside the routed shell.
+retail_dashboard_layout = app.layout.children[1]
+app.layout = build_app_shell()
+
+
+def get_active_sales(uploaded_data=None):
+    """Return the browser-uploaded dataset or the built-in UCI dataset."""
+    if uploaded_data is None:
+        return sales
+    if not isinstance(uploaded_data, dict) or "payload" not in uploaded_data:
+        raise ValueError("The uploaded dashboard data is invalid.")
+    return deserialize_dashboard_sales(uploaded_data["payload"])
+
+
+@app.callback(
+    Output("route-page-content", "children"),
+    Output("nav-overview-desktop", "className"),
+    Output("nav-retail-desktop", "className"),
+    Output("nav-data-desktop", "className"),
+    Output("nav-quality-desktop", "className"),
+    Output("nav-explorer-desktop", "className"),
+    Output("nav-overview-mobile", "className"),
+    Output("nav-retail-mobile", "className"),
+    Output("nav-data-mobile", "className"),
+    Output("nav-quality-mobile", "className"),
+    Output("nav-explorer-mobile", "className"),
+    Output("mobile-nav-details", "open"),
+    Input("url", "pathname"),
+)
+def render_page(pathname):
+    """Render the requested route and update navigation state."""
+    route = (pathname or "/").rstrip("/") or "/"
+    base_link_class = "rp-nav-link"
+    active_link_class = "rp-nav-link rp-nav-link-active"
+
+    def route_result(page, active_route=None):
+        nav_classes = tuple(
+            active_link_class if route == active_route else base_link_class
+            for route in ("/", "/retail", "/data", "/quality", "/explorer")
+        )
+        return (page,) + nav_classes + nav_classes + (False,)
+
+    if route == "/":
+        return route_result(build_overview_page(), "/")
+
+    if route == "/retail":
+        return route_result(retail_dashboard_layout, "/retail")
+
+    if route == "/data":
+        return route_result(build_data_workspace_page(), "/data")
+
+    if route == "/quality":
+        return route_result(build_quality_lab_page(), "/quality")
+
+    if route == "/explorer":
+        return route_result(build_visual_explorer_page(), "/explorer")
+
+    return route_result(build_not_found_page(route))
+
+
+@app.callback(
+    Output("dataset-source-notice", "className"),
+    Output("dataset-source-label", "children"),
+    Input("uploaded-sales-store", "data"),
+    Input("uploaded-dataset-store", "data"),
+    Input("url", "pathname"),
+)
+def update_dataset_source_notice(uploaded_data, workspace_data, pathname):
+    """Make the active data source visible across app routes."""
+    if uploaded_data:
+        filename = uploaded_data["filename"]
+        if pathname in {"/retail", "/explorer"}:
+            message = f"This analysis is using {filename}."
+        else:
+            message = f"{filename} is ready for Retail Intelligence."
+        links = [
+            dcc.Link("Open Retail Intelligence", href="/retail"),
+            dcc.Link("Manage dataset", href="/data"),
+        ]
+    elif (
+        workspace_data
+        and "payload" in workspace_data
+        and pathname in {"/retail", "/explorer", "/quality"}
+    ):
+        filename = workspace_data["filename"]
+        message = (
+            f"Retail analytics are still using the built-in UCI dataset. "
+            f"{filename} is available in Your Data for inspection."
+        )
+        links = [
+            dcc.Link("Open Your Data", href="/data"),
+            dcc.Link("Open Retail Intelligence", href="/retail"),
+        ]
+    else:
+        return "rp-data-source-notice rp-hidden", ""
+
+    return (
+        "rp-data-source-notice",
+        [
+            html.Span(message),
+            *links,
+        ],
+    )
+
+
+@app.callback(
+    Output("visual-explorer-chart", "figure"),
+    Output("visual-explorer-summary", "children"),
+    Output("visual-explorer-preview", "children"),
+    Input("visual-explorer-dimension", "value"),
+    Input("visual-explorer-measure", "value"),
+    Input("visual-explorer-aggregation", "value"),
+    Input("visual-explorer-chart-type", "value"),
+    Input("visual-explorer-filter-column", "value"),
+    Input("visual-explorer-filter-value", "value"),
+    Input("uploaded-sales-store", "data"),
+)
+def update_visual_explorer(
+    dimension,
+    measure,
+    aggregation,
+    chart_type,
+    filter_column,
+    filter_value,
+    uploaded_data=None,
+):
+    """Render a chart from the currently active retail dataset."""
+    active_sales = get_active_sales(uploaded_data)
+    filtered_sales = filter_sales(
+        active_sales,
+        filter_column,
+        filter_value,
+    )
+    grouped = aggregate_sales(
+        filtered_sales,
+        dimension,
+        measure,
+        aggregation,
+    )
+    figure = build_visual_explorer_chart(
+        grouped,
+        dimension,
+        measure,
+        chart_type,
+        aggregation,
+    )
+    source = (
+        uploaded_data["filename"]
+        if uploaded_data
+        else "the built-in UCI dataset"
+    )
+    summary = (
+        f"Showing {len(filtered_sales):,} of {len(active_sales):,} ordinary "
+        f"sales transactions from {source}; {len(grouped):,} groups charted."
+    )
+    return (
+        apply_chart_theme(figure),
+        summary,
+        build_filtered_preview(filtered_sales),
+    )
+
+
+@app.callback(
+    Output("visual-explorer-aggregation", "options"),
+    Output("visual-explorer-aggregation", "value"),
+    Input("visual-explorer-measure", "value"),
+    State("visual-explorer-aggregation", "value"),
+)
+def update_visual_explorer_aggregations(measure, current_aggregation):
+    """Offer only aggregations valid for the selected measure's data type."""
+    if measure not in MEASURES:
+        raise ValueError(f"Unsupported visual-explorer measure: {measure}")
+    is_numeric = MEASURES[measure][2]
+    allowed_aggregations = (
+        AGGREGATIONS.items()
+        if is_numeric
+        else (
+            (value, label)
+            for value, label in AGGREGATIONS.items()
+            if value in {"count", "nunique"}
+        )
+    )
+    options = [
+        {"label": label, "value": value}
+        for value, label in allowed_aggregations
+    ]
+    allowed_values = {option["value"] for option in options}
+    aggregation = (
+        current_aggregation
+        if current_aggregation in allowed_values
+        else DEFAULT_AGGREGATIONS[measure]
+    )
+    return options, aggregation
+
+
+@app.callback(
+    Output("visual-explorer-download", "data"),
+    Input("visual-explorer-export-button", "n_clicks"),
+    State("visual-explorer-dimension", "value"),
+    State("visual-explorer-measure", "value"),
+    State("visual-explorer-aggregation", "value"),
+    State("visual-explorer-filter-column", "value"),
+    State("visual-explorer-filter-value", "value"),
+    State("uploaded-sales-store", "data"),
+    prevent_initial_call=True,
+)
+def export_visual_explorer_results(
+    click_count,
+    dimension,
+    measure,
+    aggregation,
+    filter_column,
+    filter_value,
+    uploaded_data=None,
+):
+    """Download the grouped values shown in the Visual Explorer chart."""
+    if not click_count:
+        raise PreventUpdate
+    active_sales = get_active_sales(uploaded_data)
+    filtered_sales = filter_sales(
+        active_sales,
+        filter_column,
+        filter_value,
+    )
+    grouped = aggregate_sales(
+        filtered_sales,
+        dimension,
+        measure,
+        aggregation,
+    )
+    return dcc.send_data_frame(
+        grouped.to_csv,
+        "visual-explorer-results.csv",
+        index=False,
+    )
+
+
+@app.callback(
+    Output("visual-explorer-retail-panel", "className"),
+    Output("universal-analytics-panel", "className"),
+    Input("uploaded-dataset-store", "data"),
+)
+def update_visual_explorer_mode(dataset_store):
+    """Choose the generic explorer for uploads and retail explorer by default."""
+    if dataset_store and "payload" in dataset_store:
+        return "rp-explorer-panel rp-hidden", "rp-explorer-panel"
+    return "rp-explorer-panel", "rp-explorer-panel rp-hidden"
+
+
+@app.callback(
+    Output("universal-dimension", "options"),
+    Output("universal-dimension", "value"),
+    Output("universal-measure", "options"),
+    Output("universal-measure", "value"),
+    Output("universal-filter-column", "options"),
+    Output("universal-filter-column", "value"),
+    Input("uploaded-dataset-store", "data"),
+)
+def update_universal_analytics_controls(dataset_store):
+    """Populate analytics selectors from the uploaded dataset's detected types."""
+    if not dataset_store or "payload" not in dataset_store:
+        return (
+            [],
+            None,
+            [],
+            None,
+            [{"label": "No filter", "value": ""}],
+            "",
+        )
+
+    controls = analysis_control_options(
+        profile_workspace_payload(dataset_store["payload"])
+    )
+    return (
+        controls["dimension_options"],
+        controls["dimension"],
+        controls["measure_options"],
+        controls["measure"],
+        controls["filter_options"],
+        "",
+    )
+
+
+@app.callback(
+    Output("universal-aggregation", "options"),
+    Output("universal-aggregation", "value"),
+    Input("universal-measure", "value"),
+    Input("uploaded-dataset-store", "data"),
+    State("universal-aggregation", "value"),
+)
+def update_universal_aggregation_options(
+    measure,
+    dataset_store,
+    current_aggregation,
+):
+    """Only offer aggregations supported by a selected uploaded measure."""
+    if not dataset_store or "payload" not in dataset_store:
+        allowed = UNIVERSAL_AGGREGATIONS.items()
+        default = "count"
+    elif measure == ROW_COUNT_MEASURE:
+        allowed = (("count", UNIVERSAL_AGGREGATIONS["count"]),)
+        default = "count"
+    else:
+        profile = profile_workspace_payload(dataset_store["payload"])
+        controls = analysis_control_options(profile)
+        if measure in controls["numeric_columns"]:
+            allowed = (
+                (key, label)
+                for key, label in UNIVERSAL_AGGREGATIONS.items()
+                if key in NUMERIC_AGGREGATIONS
+                or key in {"count", "nunique"}
+            )
+            default = "sum"
+        else:
+            allowed = (
+                (key, label)
+                for key, label in UNIVERSAL_AGGREGATIONS.items()
+                if key in {"count", "nunique"}
+            )
+            default = "count"
+
+    options = [
+        {"label": label, "value": key}
+        for key, label in allowed
+    ]
+    valid_values = {option["value"] for option in options}
+    aggregation = (
+        current_aggregation
+        if current_aggregation in valid_values
+        else default
+    )
+    return options, aggregation
+
+
+@app.callback(
+    Output("universal-analytics-chart", "figure"),
+    Output("universal-chart-summary", "children"),
+    Output("universal-analytics-preview", "children"),
+    Input("universal-dimension", "value"),
+    Input("universal-measure", "value"),
+    Input("universal-aggregation", "value"),
+    Input("universal-chart-type", "value"),
+    Input("universal-filter-column", "value"),
+    Input("universal-filter-value", "value"),
+    Input("uploaded-dataset-store", "data"),
+)
+def update_universal_analytics_chart(
+    dimension,
+    measure,
+    aggregation,
+    chart_type,
+    filter_column,
+    filter_value,
+    dataset_store,
+):
+    """Render a type-safe grouped chart from any uploaded tabular dataset."""
+    if not dataset_store or "payload" not in dataset_store:
+        return (
+            build_empty_figure("Upload a dataset to begin universal analysis."),
+            "No uploaded dataset is active.",
+            html.P("Upload a CSV or XLSX file on Your Data."),
+        )
+
+    try:
+        data = deserialize_workspace_dataset(dataset_store["payload"])
+        profile = profile_workspace_payload(dataset_store["payload"])
+        controls = analysis_control_options(profile)
+        filtered_data = filter_dataset(data, filter_column, filter_value)
+        grouped = aggregate_dataset(
+            filtered_data,
+            dimension,
+            measure,
+            aggregation,
+            numeric_columns=controls["numeric_columns"],
+            date_columns=controls["date_columns"],
+        )
+        figure = build_universal_figure(
+            grouped,
+            dimension,
+            measure,
+            aggregation,
+            chart_type,
+            date_columns=controls["date_columns"],
+        )
+    except ValueError as error:
+        return (
+            build_empty_figure(str(error)),
+            str(error),
+            html.P("Review the selected columns and aggregation."),
+        )
+
+    summary = (
+        f"Showing {len(filtered_data):,} of {len(data):,} rows from "
+        f"{dataset_store['filename']}; {len(grouped):,} groups charted."
+    )
+    return (
+        apply_chart_theme(figure),
+        summary,
+        build_filtered_preview(filtered_data),
+    )
+
+
+@app.callback(
+    Output("universal-analysis-plan", "children"),
+    Output("universal-analysis-statistics", "children"),
+    Output("universal-correlation-chart", "figure"),
+    Output("universal-trend-chart", "figure"),
+    Input("uploaded-dataset-store", "data"),
+)
+def render_universal_analysis_overview(dataset_store):
+    """Show descriptive statistics, automatic analysis suggestions, and trends."""
+    if not dataset_store or "payload" not in dataset_store:
+        empty_stats = html.P("Upload a dataset to calculate statistics.")
+        return (
+            empty_stats,
+            empty_stats,
+            build_empty_figure("Upload a dataset to inspect correlations."),
+            build_empty_figure("Upload a dataset to inspect date trends."),
+        )
+
+    try:
+        data = deserialize_workspace_dataset(dataset_store["payload"])
+        profile = profile_workspace_payload(dataset_store["payload"])
+    except ValueError as error:
+        message = html.P(
+            f"The uploaded dataset could not be analyzed: {error}",
+            className="rp-upload-error",
+        )
+        return (
+            message,
+            message,
+            build_empty_figure(str(error)),
+            build_empty_figure(str(error)),
+        )
+
+    summary = profile["summary"]
+    recommendations = build_analysis_recommendations(profile)
+    plan = html.Div(
+        [
+            html.Strong(
+                f"Automatic analysis plan for {dataset_store['filename']}"
+            ),
+            html.P(
+                f"{summary['dimensions']} detected across "
+                f"{sum(item['detected_type'] == 'numeric' for item in profile['columns'])} "
+                "numeric, "
+                f"{sum(item['detected_type'] == 'categorical' for item in profile['columns'])} "
+                "categorical, and "
+                f"{sum(item['detected_type'] == 'date' for item in profile['columns'])} "
+                "date columns."
+            ),
+            html.Ul([html.Li(item) for item in recommendations]),
+        ]
+    )
+
+    numeric_profiles = [
+        item
+        for item in profile["columns"]
+        if item["detected_type"] == "numeric"
+    ]
+    if numeric_profiles:
+        statistics = html.Table(
+            [
+                html.Thead(
+                    html.Tr(
+                        [
+                            html.Th("Numeric column"),
+                            html.Th("Valid"),
+                            html.Th("Missing"),
+                            html.Th("Minimum"),
+                            html.Th("Q1"),
+                            html.Th("Median"),
+                            html.Th("Q3"),
+                            html.Th("Maximum"),
+                            html.Th("Mean"),
+                            html.Th("Std. dev."),
+                        ]
+                    )
+                ),
+                html.Tbody(
+                    [
+                        html.Tr(
+                            [
+                                html.Td(item["name"]),
+                                html.Td(
+                                    f"{item['non_missing_count'] - item['invalid_numeric_count']:,}"
+                                ),
+                                html.Td(f"{item['missing_count']:,}"),
+                                *[
+                                    html.Td(
+                                        str(item["statistics"].get(key, "-"))
+                                    )
+                                    for key in (
+                                        "minimum",
+                                        "q1",
+                                        "median",
+                                        "q3",
+                                        "maximum",
+                                        "mean",
+                                        "standard_deviation",
+                                    )
+                                ],
+                            ]
+                        )
+                        for item in numeric_profiles
+                    ]
+                ),
+            ]
+        )
+    else:
+        statistics = html.P(
+            "No numeric columns were detected. Descriptive numeric "
+            "statistics are not available."
+        )
+
+    return (
+        plan,
+        statistics,
+        apply_chart_theme(build_correlation_figure(data, profile)),
+        apply_chart_theme(build_trend_figure(data, profile)),
+    )
+
+
+@app.callback(
+    Output("universal-analytics-download", "data"),
+    Input("universal-analytics-export-button", "n_clicks"),
+    State("universal-dimension", "value"),
+    State("universal-measure", "value"),
+    State("universal-aggregation", "value"),
+    State("universal-filter-column", "value"),
+    State("universal-filter-value", "value"),
+    State("uploaded-dataset-store", "data"),
+    prevent_initial_call=True,
+)
+def export_universal_analytics(
+    click_count,
+    dimension,
+    measure,
+    aggregation,
+    filter_column,
+    filter_value,
+    dataset_store,
+):
+    """Export the grouped results currently selected in universal analytics."""
+    if not click_count or not dataset_store or "payload" not in dataset_store:
+        raise PreventUpdate
+
+    data = deserialize_workspace_dataset(dataset_store["payload"])
+    controls = analysis_control_options(
+        profile_workspace_payload(dataset_store["payload"])
+    )
+    filtered_data = filter_dataset(data, filter_column, filter_value)
+    grouped = aggregate_dataset(
+        filtered_data,
+        dimension,
+        measure,
+        aggregation,
+        numeric_columns=controls["numeric_columns"],
+        date_columns=controls["date_columns"],
+    )
+    filename = Path(dataset_store["filename"]).stem
+    return dcc.send_data_frame(
+        grouped.to_csv,
+        f"{filename}-grouped-results.csv",
+        index=False,
+    )
+
+
+@app.callback(
+    Output("quality-lab-content", "children"),
+    Input("uploaded-sales-store", "data"),
+    Input("uploaded-dataset-store", "data"),
+)
+def render_quality_lab(uploaded_data, workspace_data):
+    """Render diagnostics for the current browser dataset or UCI data."""
+    if workspace_data and "payload" in workspace_data:
+        try:
+            data = deserialize_workspace_dataset(workspace_data["payload"])
+        except ValueError as error:
+            return html.P(
+                f"The uploaded dataset could not be profiled: {error}",
+                className="rp-upload-error",
+            )
+
+        profile = profile_dataset(data)
+        quality_content = build_dataset_quality_content(
+            profile,
+            workspace_data["filename"],
+            workspace_data.get("selected_sheet"),
+        )
+        if uploaded_data:
+            return html.Div(
+                [
+                    quality_content,
+                    build_quality_lab_content(uploaded_data),
+                ]
+            )
+        return quality_content
+
+    if uploaded_data:
+        return build_quality_lab_content(uploaded_data)
+
+    return build_quality_lab_content(
+        default_sales_rows=len(sales),
+        default_cleaned_rows=total_cleaned_transactions,
+        default_transaction_counts=transaction_counts.to_dict(),
+    )
+
+
+@app.callback(
+    Output("country-selector", "options"),
+    Output("country-selector", "value"),
+    Output("start-date", "min_date_allowed"),
+    Output("start-date", "max_date_allowed"),
+    Output("start-date", "date"),
+    Output("end-date", "min_date_allowed"),
+    Output("end-date", "max_date_allowed"),
+    Output("end-date", "date"),
+    Input("uploaded-sales-store", "data"),
+    Input("reset-filters", "n_clicks"),
+)
+def update_dashboard_filter_controls(uploaded_data, _reset_clicks=0):
+    """Keep country and date filters aligned with the active dataset."""
+    active_sales = get_active_sales(uploaded_data)
+    if active_sales.empty:
+        return (
+            [{"label": "All Countries", "value": "All"}],
+            "All",
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+
+    min_date = active_sales["InvoiceDate"].min().date()
+    max_date = active_sales["InvoiceDate"].max().date()
+    countries = sorted(active_sales["Country"].dropna().astype(str).unique())
+    options = [{"label": "All Countries", "value": "All"}] + [
+        {"label": country, "value": country}
+        for country in countries
+    ]
+    return (
+        options,
+        "All",
+        min_date,
+        max_date,
+        min_date,
+        min_date,
+        max_date,
+        max_date,
+    )
+
+
+def reset_filters(n_clicks, uploaded_data=None):
+    """Return full-range filter values for the active dataset."""
+    if not n_clicks:
+        return "All", None, None
+
+    active_sales = get_active_sales(uploaded_data)
+    return (
+        "All",
+        active_sales["InvoiceDate"].min().date(),
+        active_sales["InvoiceDate"].max().date(),
+    )
+
+
+@app.callback(
+    Output("dashboard-dataset-meta", "children"),
+    Output("dataset-sales-records", "children"),
+    Output("dataset-unique-products", "children"),
+    Output("dataset-country-count", "children"),
+    Output("dataset-customer-count", "children"),
+    Output("quality-sale-count", "children"),
+    Output("quality-cancellation-count", "children"),
+    Output("quality-return-count", "children"),
+    Output("quality-zero-price-count", "children"),
+    Output("quality-negative-price-count", "children"),
+    Output("quality-adjustment-count", "children"),
+    Output("quality-cleaned-total", "children"),
+    Input("uploaded-sales-store", "data"),
+)
+def update_dataset_summary(uploaded_data):
+    """Refresh full-dataset statistics and quality counts."""
+    active_sales = get_active_sales(uploaded_data)
+    if uploaded_data:
+        meta = (
+            f"{uploaded_data['filename']}  |  "
+            f"{active_sales['InvoiceDate'].min():%d %b %Y} – "
+            f"{active_sales['InvoiceDate'].max():%d %b %Y}  |  "
+            "Currency: GBP (£)"
+        )
+        counts = uploaded_data["transaction_counts"]
+        cleaned_rows = uploaded_data["cleaned_rows"]
+    else:
+        meta = (
+            "UCI Online Retail  |  "
+            "December 2010 – November 2011  |  "
+            "Currency: GBP (£)"
+        )
+        counts = transaction_counts.to_dict()
+        cleaned_rows = total_cleaned_transactions
+
+    return (
+        meta,
+        f"{len(active_sales):,}",
+        f"{active_sales['StockCode'].nunique():,}",
+        f"{active_sales['Country'].nunique():,}",
+        f"{active_sales['CustomerID'].nunique():,}",
+        f"{counts.get('sale', 0):,}",
+        f"{counts.get('cancellation', 0):,}",
+        f"{counts.get('return_or_reversal', 0):,}",
+        f"{counts.get('zero_price_review', 0):,}",
+        f"{counts.get('negative_price_review', 0):,}",
+        f"{counts.get('accounting_adjustment', 0):,}",
+        f"Total cleaned records: {cleaned_rows:,}",
+    )
+
+
+@app.callback(
+    Output("uploaded-file-store", "data"),
+    Input("retail-dataset-upload", "contents"),
+    Input("restore-default-data", "n_clicks"),
+    State("retail-dataset-upload", "filename"),
+)
+def store_uploaded_file(contents, reset_clicks, filename):
+    """Keep the original upload in browser memory for sheet reselection."""
+    if (
+        callback_context.triggered_id == "restore-default-data"
+        and reset_clicks
+    ):
+        return None
+    if not contents:
+        raise PreventUpdate
+
+    safe_filename = Path(filename).name if filename else "Uploaded file"
+    return {"contents": contents, "filename": safe_filename}
+
+
+@app.callback(
+    Output("uploaded-sales-store", "data"),
+    Output("uploaded-dataset-store", "data"),
+    Input("uploaded-file-store", "data"),
+    Input("retail-worksheet-selector", "value"),
+)
+def update_uploaded_dataset(uploaded_file, sheet_name):
+    """Parse generic uploads while enabling retail analytics when compatible."""
+    if not uploaded_file:
+        return None, None
+
+    trigger = callback_context.triggered_id
+    selected_sheet = (
+        None if trigger == "uploaded-file-store" else sheet_name
+    )
+    file_contents = uploaded_file["contents"]
+    safe_filename = uploaded_file["filename"]
+
+    try:
+        worksheet_names = list_uploaded_worksheet_names(
+            file_contents,
+            safe_filename,
+        )
+        dataset_upload = process_uploaded_dataset(
+            file_contents,
+            safe_filename,
+            selected_sheet,
+        )
+        dataset_payload = serialize_workspace_dataset(dataset_upload.data)
+    except ValueError as error:
+        return (
+            None,
+            {"error": str(error), "filename": safe_filename},
+        )
+
+    workspace_store = {
+        "payload": dataset_payload,
+        "filename": safe_filename,
+        "rows": len(dataset_upload.data),
+        "columns": len(dataset_upload.data.columns),
+        "sheet_names": list(worksheet_names),
+        "selected_sheet": dataset_upload.selected_sheet,
+    }
+    retail_store = None
+    missing_columns = REQUIRED_COLUMNS.difference(dataset_upload.data.columns)
+    if not missing_columns:
+        try:
+            analysis = process_retail_dataset(dataset_upload.data)
+            dashboard_payload = serialize_dashboard_sales(
+                analysis.cleaned_transactions
+            )
+        except ValueError as error:
+            workspace_store["retail_status"] = (
+                "The generic dataset is loaded, but Retail Intelligence "
+                f"continues to use the built-in UCI dataset: {error}"
+            )
+        else:
+            retail_store = {
+                "payload": dashboard_payload,
+                "filename": safe_filename,
+                "quality_report": analysis.quality_report,
+                "transaction_counts": (
+                    analysis.cleaned_transactions["TransactionType"]
+                    .value_counts()
+                    .to_dict()
+                ),
+                "cleaned_rows": len(analysis.cleaned_transactions),
+                "sales_rows": analysis.sales_rows,
+            }
+            workspace_store["retail_status"] = (
+                "This dataset is also ready for Retail Intelligence."
+            )
+    else:
+        workspace_store["retail_status"] = (
+            "This dataset does not include the full retail transaction "
+            "schema, so Retail Intelligence continues to use the built-in "
+            "UCI dataset."
+        )
+
+    return retail_store, workspace_store
+
+
+@app.callback(
+    Output("retail-worksheet-selector", "options"),
+    Output("retail-worksheet-selector", "value"),
+    Output("retail-worksheet-field", "className"),
+    Input("uploaded-file-store", "data"),
+)
+def restore_workspace_worksheet(uploaded_file):
+    """Show worksheet choices for the currently stored Excel workbook."""
+    if not uploaded_file:
+        return [], None, "rp-worksheet-field rp-hidden"
+
+    try:
+        sheet_names = list_uploaded_worksheet_names(
+            uploaded_file["contents"],
+            uploaded_file["filename"],
+        )
+    except ValueError:
+        return [], None, "rp-worksheet-field rp-hidden"
+    if not sheet_names:
+        return [], None, "rp-worksheet-field rp-hidden"
+
+    return (
+        [{"label": name, "value": name} for name in sheet_names],
+        sheet_names[0],
+        "rp-worksheet-field",
+    )
+
+
+@app.callback(
+    Output("retail-upload-status", "children"),
+    Output("retail-upload-results", "children"),
+    Output("retail-upload-download-button", "disabled"),
+    Input("uploaded-dataset-store", "data"),
+    Input("uploaded-sales-store", "data"),
+)
+def render_workspace_upload(dataset_store, uploaded_sales):
+    """Hydrate the generic profile and status from browser-session stores."""
+    if not dataset_store:
+        if uploaded_sales:
+            return (
+                "The active Retail Intelligence dataset is ready.",
+                None,
+                True,
+            )
+        return "The built-in UCI dataset is active.", None, True
+
+    if "error" in dataset_store:
+        return (
+            html.Span(
+                dataset_store["error"],
+                className="rp-upload-error",
+            ),
+            None,
+            True,
+        )
+
+    try:
+        data = deserialize_workspace_dataset(dataset_store["payload"])
+    except ValueError as error:
+        return (
+            html.Span(str(error), className="rp-upload-error"),
+            None,
+            True,
+        )
+
+    status = (
+        f"{dataset_store['filename']} is loaded for inspection in this "
+        "browser session. "
+        f"{dataset_store.get('retail_status', '')}"
+    )
+    return (
+        html.Span(status, className="rp-upload-success"),
+        build_dataset_upload_results(
+            data,
+            dataset_store.get("selected_sheet"),
+        ),
+        False,
+    )
+
+
+@app.callback(
+    Output("retail-upload-download", "data"),
+    Input("retail-upload-download-button", "n_clicks"),
+    State("uploaded-dataset-store", "data"),
+    prevent_initial_call=True,
+)
+def download_workspace_dataset(n_clicks, dataset_store):
+    """Download the selected generic dataset without server-side storage."""
+    if not n_clicks or not dataset_store or "payload" not in dataset_store:
+        raise PreventUpdate
+
+    data = deserialize_workspace_dataset(dataset_store["payload"])
+    filename = Path(dataset_store["filename"]).stem
+    return dcc.send_data_frame(
+        data.to_csv,
+        f"{filename}.csv",
+        index=False,
+    )
 
 
 @app.callback(
@@ -1305,6 +2298,7 @@ app.layout = html.Div(
     Input("country-selector", "value"),
     Input("start-date", "date"),
     Input("end-date", "date"),
+    Input("uploaded-sales-store", "data"),
 )
 def update_chart(
     selected_metric,
@@ -1312,13 +2306,16 @@ def update_chart(
     selected_country,
     start_date,
     end_date,
+    uploaded_data=None,
 ):
+    active_sales = get_active_sales(uploaded_data)
+
     # Filter sales by country.
     if selected_country == "All":
-        filtered_sales = sales
+        filtered_sales = active_sales
     else:
-        filtered_sales = sales.loc[
-            sales["Country"] == selected_country
+        filtered_sales = active_sales.loc[
+            active_sales["Country"] == selected_country
         ]
 
     if start_date:
@@ -1327,7 +2324,7 @@ def update_chart(
         ]
 
     if end_date:
-        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        end_exclusive = pd.Timestamp(end_date) + pd.offsets.Day(1)
         filtered_sales = filtered_sales.loc[
             filtered_sales["InvoiceDate"] < end_exclusive
         ]
@@ -1476,18 +2473,50 @@ def update_chart(
             labels={"Month": "Month", selected_metric: labels[selected_metric]},
             custom_data=["Revenue", "Orders", "Average Order Value"],
         )
-        fig.update_traces(
-            hovertemplate=(
-                "<b>Month: %{x|%B %Y}</b><br>"
-                "Gross sales revenue (£): %{customdata[0]:,.2f}<br>"
-                "Orders: %{customdata[1]:,.0f}<br>"
-                "Average Order Value (£): %{customdata[2]:,.2f}"
-                "<extra></extra>"
+        hover_names = {
+            "Revenue": "Revenue",
+            "Orders": "Orders",
+            "Average Order Value": "Average order value",
+        }
+        hover_values = {
+            "Revenue": "£%{y:,.2f}",
+            "Orders": "%{y:,.0f}",
+            "Average Order Value": "£%{y:,.2f}",
+        }
+        hover_details = {
+            "Revenue": (
+                "Orders: %{customdata[1]:,.0f}",
+                "Average order value: £%{customdata[2]:,.2f}",
             ),
+            "Orders": (
+                "Revenue: £%{customdata[0]:,.2f}",
+                "Average order value: £%{customdata[2]:,.2f}",
+            ),
+            "Average Order Value": (
+                "Revenue: £%{customdata[0]:,.2f}",
+                "Orders: %{customdata[1]:,.0f}",
+            ),
+        }
+        tooltip = (
+            f"<b>%{{x|%B %Y}}</b><br>"
+            f"<b>{hover_names[selected_metric]}: "
+            f"{hover_values[selected_metric]}</b>"
+            + "".join(
+                f"<br>{detail}"
+                for detail in hover_details[selected_metric]
+            )
+            + "<extra></extra>"
+        )
+        fig.update_traces(
+            hovertemplate=tooltip,
             hoverlabel={
                 "bgcolor": "#14213d",
                 "bordercolor": "#203f72",
-                "font": {"family": "Arial, sans-serif", "size": 13, "color": "#ffffff"},
+                "font": {
+                    "family": "Arial, sans-serif",
+                    "size": 16,
+                    "color": "#ffffff",
+                },
             },
         )
         fig.update_xaxes(showgrid=False, tickformat="%b %Y", dtick="M1", ticklabelmode="period")
@@ -1570,13 +2599,13 @@ def update_chart(
         yaxis={"categoryorder": "total ascending"},
     )
 
-    country_sales = sales
+    country_sales = active_sales
     if start_date:
         country_sales = country_sales.loc[
             country_sales["InvoiceDate"] >= pd.Timestamp(start_date)
         ]
     if end_date:
-        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        end_exclusive = pd.Timestamp(end_date) + pd.offsets.Day(1)
         country_sales = country_sales.loc[
             country_sales["InvoiceDate"] < end_exclusive
         ]
@@ -1721,6 +2750,7 @@ def update_chart(
     Input("country-selector", "value"),
     Input("start-date", "date"),
     Input("end-date", "date"),
+    Input("uploaded-sales-store", "data"),
 )
 def update_summary_cards(
     selected_metric,
@@ -1728,18 +2758,23 @@ def update_summary_cards(
     selected_country,
     start_date,
     end_date,
+    uploaded_data=None,
 ):
+    active_sales = get_active_sales(uploaded_data)
+
     if selected_country == "All":
-        filtered_sales = sales
+        filtered_sales = active_sales
     else:
-        filtered_sales = sales.loc[sales["Country"] == selected_country]
+        filtered_sales = active_sales.loc[
+            active_sales["Country"] == selected_country
+        ]
 
     if start_date:
         filtered_sales = filtered_sales.loc[
             filtered_sales["InvoiceDate"] >= pd.Timestamp(start_date)
         ]
     if end_date:
-        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+        end_exclusive = pd.Timestamp(end_date) + pd.offsets.Day(1)
         filtered_sales = filtered_sales.loc[
             filtered_sales["InvoiceDate"] < end_exclusive
         ]
@@ -1839,37 +2874,25 @@ def update_summary_cards(
 
 
 @app.callback(
-    Output("country-selector", "value"),
-    Output("start-date", "date"),
-    Output("end-date", "date"),
-    Input("reset-filters", "n_clicks"),
-    prevent_initial_call=True,
-)
-def reset_filters(n_clicks):
-    if not n_clicks:
-        return "All", None, None
-
-    return (
-        "All",
-        sales["InvoiceDate"].min().date(),
-        sales["InvoiceDate"].max().date(),
-    )
-
-
-
-@app.callback(
     Output("download-filtered-csv", "data"),
     Input("export-csv-button", "n_clicks"),
     State("country-selector", "value"),
     State("start-date", "date"),
     State("end-date", "date"),
+    State("uploaded-sales-store", "data"),
     prevent_initial_call=True,
 )
-def export_filtered_csv(n_clicks, selected_country, start_date, end_date):
+def export_filtered_csv(
+    n_clicks,
+    selected_country,
+    start_date,
+    end_date,
+    uploaded_data=None,
+):
     if not n_clicks:
         return None
 
-    filtered_sales = sales.copy()
+    filtered_sales = get_active_sales(uploaded_data).copy()
 
     if selected_country != "All":
         filtered_sales = filtered_sales[
@@ -1884,7 +2907,7 @@ def export_filtered_csv(n_clicks, selected_country, start_date, end_date):
     if end_date:
         filtered_sales = filtered_sales[
             filtered_sales["InvoiceDate"]
-            < pd.Timestamp(end_date) + pd.Timedelta(days=1)
+            < pd.Timestamp(end_date) + pd.offsets.Day(1)
         ]
 
     export_columns = [
@@ -1918,22 +2941,29 @@ def export_filtered_csv(n_clicks, selected_country, start_date, end_date):
     Input("country-selector", "value"),
     Input("start-date", "date"),
     Input("end-date", "date"),
+    Input("uploaded-sales-store", "data"),
 )
-def update_cross_sell(selected_country, start_date, end_date):
+def update_cross_sell(
+    selected_country,
+    start_date,
+    end_date,
+    uploaded_data=None,
+):
     """Calculate basket co-purchase patterns for the current filter selection."""
-    mask = pd.Series(True, index=sales.index)
+    active_sales = get_active_sales(uploaded_data)
+    mask = pd.Series(True, index=active_sales.index)
 
     if selected_country != "All":
-        mask &= sales["Country"].eq(selected_country)
+        mask &= active_sales["Country"].eq(selected_country)
 
     if start_date:
-        mask &= sales["InvoiceDate"] >= pd.Timestamp(start_date)
+        mask &= active_sales["InvoiceDate"] >= pd.Timestamp(start_date)
 
     if end_date:
-        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
-        mask &= sales["InvoiceDate"] < end_exclusive
+        end_exclusive = pd.Timestamp(end_date) + pd.offsets.Day(1)
+        mask &= active_sales["InvoiceDate"] < end_exclusive
 
-    filtered_sales = sales.loc[mask].copy()
+    filtered_sales = active_sales.loc[mask].copy()
     pair_data = build_product_associations(filtered_sales, max_pairs=8)
 
     if pair_data.empty:
@@ -1956,7 +2986,7 @@ def update_cross_sell(selected_country, start_date, end_date):
             "No repeated product pairs were observed in the current filtered view.",
             style={"margin": "0"},
         )
-        return fig, summary_content
+        return apply_chart_theme(fig), summary_content
 
     top_pair = summarize_top_product_pair(filtered_sales, max_pairs=8)
     pair_chart = pair_data.head(8).sort_values("CoPurchaseCount", ascending=True)
@@ -1994,7 +3024,7 @@ def update_cross_sell(selected_country, start_date, end_date):
             style={"margin": "0"},
         ),
     ]
-    return fig, summary_content
+    return apply_chart_theme(fig), summary_content
 
 
 @app.callback(
@@ -2003,22 +3033,29 @@ def update_cross_sell(selected_country, start_date, end_date):
     Input("country-selector", "value"),
     Input("start-date", "date"),
     Input("end-date", "date"),
+    Input("uploaded-sales-store", "data"),
 )
-def update_customer_insights(selected_country, start_date, end_date):
+def update_customer_insights(
+    selected_country,
+    start_date,
+    end_date,
+    uploaded_data=None,
+):
     """Show top customer accounts for the current filtered data slice."""
-    mask = pd.Series(True, index=sales.index)
+    active_sales = get_active_sales(uploaded_data)
+    mask = pd.Series(True, index=active_sales.index)
 
     if selected_country != "All":
-        mask &= sales["Country"].eq(selected_country)
+        mask &= active_sales["Country"].eq(selected_country)
 
     if start_date:
-        mask &= sales["InvoiceDate"] >= pd.Timestamp(start_date)
+        mask &= active_sales["InvoiceDate"] >= pd.Timestamp(start_date)
 
     if end_date:
-        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
-        mask &= sales["InvoiceDate"] < end_exclusive
+        end_exclusive = pd.Timestamp(end_date) + pd.offsets.Day(1)
+        mask &= active_sales["InvoiceDate"] < end_exclusive
 
-    filtered_sales = sales.loc[mask].copy()
+    filtered_sales = active_sales.loc[mask].copy()
     customer_summary = build_customer_value_summary(filtered_sales, top_n=10)
 
     if customer_summary.empty:
@@ -2041,7 +3078,7 @@ def update_customer_insights(selected_country, start_date, end_date):
             "No identifiable customer data is available in the current filtered view.",
             style={"margin": "0"},
         )
-        return fig, summary_content
+        return apply_chart_theme(fig), summary_content
 
     summary = summarize_top_customers(filtered_sales, top_n=5)
     chart_data = customer_summary.head(10).sort_values("TotalRevenue", ascending=True)
@@ -2092,7 +3129,7 @@ def update_customer_insights(selected_country, start_date, end_date):
             style={"margin": "0"},
         ),
     ]
-    return fig, summary_content
+    return apply_chart_theme(fig), summary_content
 
 
 @app.callback(
@@ -2101,27 +3138,34 @@ def update_customer_insights(selected_country, start_date, end_date):
     Input("country-selector", "value"),
     Input("start-date", "date"),
     Input("end-date", "date"),
+    Input("uploaded-sales-store", "data"),
 )
-def update_revenue_forecast(selected_country, start_date, end_date):
+def update_revenue_forecast(
+    selected_country,
+    start_date,
+    end_date,
+    uploaded_data=None,
+):
     """Update the experimental forecast for the selected data filters."""
 
 
 
     # Build filters without modifying the shared sales DataFrame.
-    mask = pd.Series(True, index=sales.index)
+    active_sales = get_active_sales(uploaded_data)
+    mask = pd.Series(True, index=active_sales.index)
 
     if selected_country != "All":
-        mask &= sales["Country"].eq(selected_country)
+        mask &= active_sales["Country"].eq(selected_country)
 
     if start_date:
-        mask &= sales["InvoiceDate"] >= pd.Timestamp(start_date)
+        mask &= active_sales["InvoiceDate"] >= pd.Timestamp(start_date)
 
     if end_date:
-        end_exclusive = pd.Timestamp(end_date) + pd.Timedelta(days=1)
-        mask &= sales["InvoiceDate"] < end_exclusive
+        end_exclusive = pd.Timestamp(end_date) + pd.offsets.Day(1)
+        mask &= active_sales["InvoiceDate"] < end_exclusive
 
     # Keep only the two columns required for forecasting.
-    forecast_data = sales.loc[mask, ["InvoiceDate", "Revenue"]]
+    forecast_data = active_sales.loc[mask, ["InvoiceDate", "Revenue"]]
 
     # Aggregate revenue by month without adding a column to sales.
     monthly_revenue = (

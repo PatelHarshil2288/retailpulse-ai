@@ -36,6 +36,11 @@ RetailPulse AI is an interactive retail analytics portfolio project built with P
 - **Interactive Filters:** Filter results by country and date range.
 - **Reset Filters:** Restore the default country and date selection.
 - **CSV Export:** Download filtered sales transactions.
+- **Your Data:** Upload a CSV or XLSX file (up to 10 MB) for a bounded column profile, missing-value summary, and sample preview. Excel workbooks support worksheet selection; datasets can be downloaded as CSV.
+- **Data Quality Lab:** Review detected column types, missing values, exact duplicates, IQR-based outlier indicators, quality findings, and non-destructive cleaning recommendations for uploaded datasets.
+- **Visual Explorer:** Open on a monthly revenue trend, compare retail dimensions with bar, donut, or line charts, or switch to type-aware universal analysis for uploaded tables, including grouped charts, numeric statistics, correlations, date trends, filters, previews, and CSV export.
+
+Uploads are processed in memory and are not written to disk. The workspace accepts up to 100,000 rows and 200 columns. Uploads that include the eight retail transaction columns listed on the Your Data page can also be activated in Retail Intelligence, with prices interpreted in GBP. Other datasets remain available for inspection in Your Data and Universal Analytics; Retail Intelligence and the Data Quality Lab's retail-specific diagnostics continue to use the built-in UCI data when the upload is not retail-compatible. Refreshing the browser clears session uploads.
 
 ### Data Quality and Processing
 
@@ -44,6 +49,12 @@ The data-processing workflow supports schema validation, duplicate removal, date
 Transaction categories include ordinary sales, cancellations, returns or reversals, zero-price records, negative-price reviews, and accounting adjustments.
 
 The dashboard analyzes ordinary sales transactions separately from records that require review.
+
+The **Your Data** page accepts general CSV and XLSX datasets, detects common delimiters and encodings, normalizes blank or duplicate headers, and displays a data profile and bounded preview. Excel workbooks allow worksheet selection. A dataset becomes active in **Retail Intelligence** only when it has the complete RetailPulse transaction schema and can be processed for dashboard analytics; otherwise, the built-in UCI dataset remains active. Use **Use built-in dataset** to clear uploaded datasets and switch back to UCI Online Retail.
+
+The **Data Quality Lab** profiles the uploaded dataset, including schema hints, column statistics, missingness, duplicate rows, potential numeric outliers, and date coverage when detectable. Findings include affected-record counts, severity, investigation guidance, and whether an automatic correction is considered safe; the source data is never silently modified. Retail-specific transaction classifications and cleaning-funnel details appear only for a compatible retail upload. The bundled UCI data is already preprocessed, so raw-file checks are not presented as though they were measured from its source.
+
+The **Visual Explorer** retains its retail-focused view for the built-in UCI dataset. For any uploaded table, its universal mode detects column types, offers only compatible aggregations, filters and previews records, and exports grouped results. The same mode shows descriptive statistics for numeric columns, Pearson correlation for numeric pairs, monthly mean trends where date and numeric columns are available, and data-driven analysis suggestions. Categorical chart results are limited to the top 15 groups, and row previews to 10 rows. Correlation is descriptive and does not imply causation; trend aggregation is labeled explicitly.
 
 ## 🛠️ Technology Stack
 
@@ -96,6 +107,8 @@ conda create -n retailpulse python=3.12
 conda activate retailpulse
 ```
 
+The declared dependency ranges have been verified with Python 3.12 and 3.14. The Docker image uses Python 3.12.
+
 ### 3. Install dependencies
 
 ```bash
@@ -104,9 +117,13 @@ python -m pip install -r requirements.txt
 
 ### 4. Prepare the dataset
 
-Download the [UCI Online Retail Dataset](https://archive.ics.uci.edu/dataset/352/online+retail) and place `Online Retail.xlsx` inside `data/raw/`.
+From the repository root, run the data-preparation script:
 
-Follow the project's data-processing workflow to create the processed files required by the dashboard.
+```bash
+python prepare_deployment.py
+```
+
+The script downloads the [UCI Online Retail Dataset](https://archive.ics.uci.edu/dataset/352/online+retail) if `data/raw/Online Retail.xlsx` is not present, then creates the processed CSV files required by the dashboard. The Docker image runs this same script during its build.
 
 ### 5. Run the dashboard locally
 
@@ -149,9 +166,9 @@ Run the complete test suite from the repository root:
 python -m pytest -v
 ```
 
-The latest verified test run reported **74 passed tests and one non-blocking warning**. Test results may change as the project evolves.
+The latest verified test run reported **126 passed tests and one non-blocking warning**. Test results may change as the project evolves.
 
-The tests cover data validation, transaction classification, KPI calculations, country and date filtering, reset behavior, callback outputs, and CSV export.
+The tests cover data validation, transaction classification, CSV/XLSX upload handling, generic dataset profiling and quality findings, universal statistics, grouping, correlation, and trend analysis, upload-to-dashboard data selection, KPI calculations, country and date filtering, reset behavior, Visual Explorer aggregation/type checks, and raw/grouped CSV exports.
 
 ## 🗺️ Project Roadmap
 
@@ -162,6 +179,8 @@ Planned and implemented enhancements include:
 - Sales forecasting and model evaluation. ✅
 - Additional customer-level analytics. ✅
 - Top customer performance summaries and ranking. ✅
+- Interactive Visual Explorer for the active retail dataset. ✅
+- Universal analytics for uploaded tables: statistics, grouping, correlation, and trends. ✅
 - Docker deployment to Hostless, with Render as a backup target. ⏳
 - Dashboard screenshots and demonstration materials. ⏳
 

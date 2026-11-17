@@ -8,7 +8,7 @@ This directory documents the datasets used by RetailPulse AI.
 
 Source: https://archive.ics.uci.edu/dataset/352/online+retail
 
-The dataset contains historical retail transactions and will support sales analysis, customer segmentation, and product analytics.
+The dataset contains historical retail transactions used for sales analysis, customer segmentation, and product analytics.
 
 ## Data handling rules
 
@@ -18,4 +18,4 @@ The dataset contains historical retail transactions and will support sales analy
 - Record the source and applicable license terms.
 - Keep raw data separate from processed analytical outputs.
 
-The actual dataset will be downloaded and processed during the data preparation phase.
+Run `python prepare_deployment.py` from the repository root to download the dataset when needed and generate the processed CSV files. The Docker image runs the same preparation script during its build.
