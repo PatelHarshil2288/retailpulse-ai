@@ -2,11 +2,14 @@
 
 This directory contains visual resources for the RetailPulse AI application.
 
-## Planned contents
+## Contents
 
 - `style.css` — dashboard typography, spacing, colors, and responsive styling
-- `images/` — project screenshots and approved visual assets
+- `images/` — portfolio screenshots captured from the live Hostless deployment
 - `logo.png` — optional project logo
+
+The portfolio screenshots show the executive overview, retail intelligence
+dashboard, Data Quality Lab, and Visual Explorer.
 
 ## Design principles
 
@@ -15,5 +18,3 @@ This directory contains visual resources for the RetailPulse AI application.
 - Use accessible color contrast and clear labels.
 - Do not rely on color alone to communicate information.
 - Keep the dashboard uncluttered and easy to navigate.
-
-Visual assets will be added as the application develops.

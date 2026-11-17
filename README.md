@@ -6,9 +6,11 @@ RetailPulse AI is an interactive retail analytics portfolio project built with P
 
 ## 📸 Dashboard Preview
 
-<!-- Add a dashboard screenshot here after capturing the running application. -->
+![RetailPulse AI retail intelligence dashboard](assets/images/retailpulse-retail-intelligence.png)
 
-*Interactive dashboard preview coming soon.*
+Additional views: [Overview](assets/images/retailpulse-overview.png) · [Data Quality Lab](assets/images/retailpulse-data-quality-lab.png) · [Visual Explorer](assets/images/retailpulse-visual-explorer.png).
+
+Screenshots are from the live Hostless deployment running commit `3a62f88`.
 
 ## 🎯 Project Objectives
 
@@ -181,14 +183,15 @@ Planned and implemented enhancements include:
 - Top customer performance summaries and ranking. ✅
 - Interactive Visual Explorer for the active retail dataset. ✅
 - Universal analytics for uploaded tables: statistics, grouping, correlation, and trends. ✅
-- Docker deployment to Hostless, with Render as a backup target. ⏳
-- Dashboard screenshots and demonstration materials. ⏳
+- Hostless deployment live; Render backup target configured. ✅
+- Local Docker build/run verification. ⏳
+- Portfolio screenshots for the dashboard, Data Quality Lab, and Visual Explorer. ✅
 
 The project roadmap reflects implemented work once it is validated in the dashboard and test suite.
 
 ## 📌 Current Status
 
-**Local Dash dashboard operational · Portable Docker deployment configured · Public deployment pending**
+**Hostless deployment live on `3a62f88` · Local Docker build/run validation pending**
 
 The full Python Dash application is preserved. Hostless is the primary target; Render is configured as a secondary target using the same Docker image.
 
