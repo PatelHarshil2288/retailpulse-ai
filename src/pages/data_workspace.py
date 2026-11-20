@@ -4,10 +4,9 @@ import base64
 import binascii
 import csv
 from dataclasses import dataclass
-from functools import lru_cache
 from io import BytesIO, StringIO
 from pathlib import Path
-from zipfile import BadZipFile
+from zipfile import BadZipFile, ZipFile
 import zlib
 
 import pandas as pd
@@ -27,6 +26,9 @@ MAX_DASHBOARD_PAYLOAD_BYTES = 8 * 1024 * 1024
 MAX_DASHBOARD_JSON_BYTES = 64 * 1024 * 1024
 MAX_DASHBOARD_SALES_ROWS = 100_000
 MAX_WORKSPACE_COLUMNS = 200
+MAX_WORKSPACE_CELLS = 2_000_000
+MAX_XLSX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
+MAX_XLSX_MEMBERS = 10_000
 SUPPORTED_SUFFIXES = {".csv", ".xlsx"}
 PREVIEW_ROW_LIMIT = 10
 WORKSPACE_PREVIEW_COLUMN_LIMIT = 10
@@ -99,7 +101,6 @@ def serialize_dashboard_sales(cleaned_transactions):
     return base64.b64encode(compressed).decode("ascii")
 
 
-@lru_cache(maxsize=2)
 def deserialize_dashboard_sales(encoded_payload):
     """Restore a bounded, validated sales frame from the browser store."""
     if not isinstance(encoded_payload, str):
@@ -179,6 +180,27 @@ def _decode_upload(contents, filename):
     return suffix, payload
 
 
+def _validate_xlsx_payload(payload):
+    """Reject XLSX archives with excessive declared expansion or members."""
+    try:
+        with ZipFile(BytesIO(payload)) as archive:
+            members = archive.infolist()
+    except (BadZipFile, OSError) as error:
+        raise ValueError(
+            "The workbook could not be read. Upload a valid .xlsx file."
+        ) from error
+
+    if len(members) > MAX_XLSX_MEMBERS:
+        raise ValueError(
+            "The workbook contains too many internal files to process safely."
+        )
+    uncompressed_size = sum(member.file_size for member in members)
+    if uncompressed_size > MAX_XLSX_UNCOMPRESSED_BYTES:
+        raise ValueError(
+            "The workbook expands beyond the supported 100 MB processing limit."
+        )
+
+
 def _read_csv_payload(payload):
     """Read delimited text using common encodings and detected separators."""
     for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
@@ -196,18 +218,61 @@ def _read_csv_payload(payload):
             delimiter = ","
 
         try:
+            csv_source = StringIO(text)
+            header = pd.read_csv(
+                csv_source,
+                sep=delimiter,
+                engine="python",
+                on_bad_lines="error",
+                nrows=0,
+            )
+            column_count = len(header.columns)
+            if column_count > MAX_WORKSPACE_COLUMNS:
+                raise ValueError(
+                    f"The dataset exceeds the {MAX_WORKSPACE_COLUMNS}-column limit."
+                )
+
+            row_count = 0
+            cell_count = column_count
+            reader = csv.reader(
+                StringIO(text, newline=""),
+                delimiter=delimiter,
+                strict=True,
+            )
+            next(reader, None)
+            for row in reader:
+                if not row:
+                    continue
+                row_count += 1
+                cell_count += len(row)
+                if row_count > MAX_DASHBOARD_SALES_ROWS:
+                    raise ValueError(
+                        "The dataset exceeds the 100,000-row workspace limit. "
+                        "Reduce the file size and try again."
+                    )
+                if cell_count > MAX_WORKSPACE_CELLS:
+                    raise ValueError(
+                        "The dataset exceeds the 2,000,000-cell workspace limit."
+                    )
+
             return pd.read_csv(
                 StringIO(text),
                 sep=delimiter,
                 engine="python",
                 on_bad_lines="error",
+                nrows=MAX_DASHBOARD_SALES_ROWS + 1,
             )
         except (
+            csv.Error,
             pd.errors.EmptyDataError,
             pd.errors.ParserError,
             UnicodeDecodeError,
             ValueError,
         ) as error:
+            if isinstance(error, ValueError) and str(error).startswith(
+                "The dataset exceeds"
+            ):
+                raise
             raise ValueError(
                 "The CSV could not be parsed. Check its encoding, delimiter, "
                 "headers, quoted fields, and row structure."
@@ -245,6 +310,7 @@ def list_uploaded_worksheet_names(contents, filename):
     suffix, payload = _decode_upload(contents, filename)
     if suffix == ".csv":
         return ()
+    _validate_xlsx_payload(payload)
 
     try:
         with pd.ExcelFile(BytesIO(payload), engine="openpyxl") as workbook:
@@ -262,6 +328,8 @@ def process_uploaded_dataset(contents, filename, sheet_name=None):
     suffix, payload = _decode_upload(contents, filename)
     sheet_names = ()
     selected_sheet = None
+    if suffix == ".xlsx":
+        _validate_xlsx_payload(payload)
 
     try:
         if suffix == ".csv":
@@ -276,9 +344,26 @@ def process_uploaded_dataset(contents, filename, sheet_name=None):
                 selected_sheet = (
                     sheet_name if sheet_name in sheet_names else sheet_names[0]
                 )
+                worksheet = workbook.book[selected_sheet]
+                if worksheet.max_row - 1 > MAX_DASHBOARD_SALES_ROWS:
+                    raise ValueError(
+                        "The selected worksheet exceeds the 100,000-row workspace limit."
+                    )
+                if worksheet.max_column > MAX_WORKSPACE_COLUMNS:
+                    raise ValueError(
+                        f"The selected worksheet exceeds the {MAX_WORKSPACE_COLUMNS}-column limit."
+                    )
+                if (
+                    max(worksheet.max_row - 1, 0) * worksheet.max_column
+                    > MAX_WORKSPACE_CELLS
+                ):
+                    raise ValueError(
+                        "The selected worksheet exceeds the 2,000,000-cell workspace limit."
+                    )
                 data = pd.read_excel(
                     workbook,
                     sheet_name=selected_sheet,
+                    nrows=MAX_DASHBOARD_SALES_ROWS + 1,
                 )
     except (
         BadZipFile,
@@ -289,7 +374,12 @@ def process_uploaded_dataset(contents, filename, sheet_name=None):
         pd.errors.ParserError,
     ) as error:
         if isinstance(error, ValueError) and str(error).startswith(
-            ("The CSV could not be parsed", "The workbook contains")
+            (
+                "The CSV could not be parsed",
+                "The workbook contains",
+                "The selected worksheet exceeds",
+                "The dataset exceeds",
+            )
         ):
             raise
         raise ValueError(
@@ -303,6 +393,10 @@ def process_uploaded_dataset(contents, filename, sheet_name=None):
     if len(data.columns) > MAX_WORKSPACE_COLUMNS:
         raise ValueError(
             f"The dataset exceeds the {MAX_WORKSPACE_COLUMNS}-column limit."
+        )
+    if len(data.index) * len(data.columns) > MAX_WORKSPACE_CELLS:
+        raise ValueError(
+            "The dataset exceeds the 2,000,000-cell workspace limit."
         )
     if len(data) > MAX_DASHBOARD_SALES_ROWS:
         raise ValueError(
@@ -337,6 +431,10 @@ def serialize_workspace_dataset(data):
         raise ValueError(
             f"The dataset exceeds the {MAX_WORKSPACE_COLUMNS}-column limit."
         )
+    if len(data.index) * len(data.columns) > MAX_WORKSPACE_CELLS:
+        raise ValueError(
+            "The dataset exceeds the 2,000,000-cell workspace limit."
+        )
 
     normalized = _normalize_dataset_columns(data)
     try:
@@ -362,7 +460,6 @@ def serialize_workspace_dataset(data):
     return base64.b64encode(compressed).decode("ascii")
 
 
-@lru_cache(maxsize=2)
 def deserialize_workspace_dataset(encoded_payload):
     """Restore a bounded generic dataset from the browser session store."""
     if not isinstance(encoded_payload, str):
@@ -402,6 +499,7 @@ def deserialize_workspace_dataset(encoded_payload):
         data.empty
         or len(data) > MAX_DASHBOARD_SALES_ROWS
         or len(data.columns) > MAX_WORKSPACE_COLUMNS
+        or len(data.index) * len(data.columns) > MAX_WORKSPACE_CELLS
     ):
         raise ValueError("The uploaded workspace data is invalid.")
     return data
@@ -468,7 +566,8 @@ def build_data_workspace_page():
                             ),
                             html.P(
                                 "CSV and .xlsx files · 10 MB maximum · Up to "
-                                "100,000 rows and 200 columns in the workspace. "
+                                "100,000 rows, 200 columns, and 2,000,000 cells. "
+                                "XLSX archives are limited to 100 MB uncompressed. "
                                 "For GBP retail analytics, include InvoiceNo, "
                                 "StockCode, Description, Quantity, InvoiceDate, "
                                 "UnitPrice, CustomerID, and Country.",
@@ -487,7 +586,10 @@ def build_data_workspace_page():
                             [
                                 html.Strong("Choose a file"),
                                 html.Span(" or drag it here"),
-                                html.Small("CSV and .xlsx · 10 MB maximum"),
+                                html.Small(
+                                    "CSV and .xlsx · 10 MB maximum · "
+                                    "processing limits apply"
+                                ),
                             ]
                         ),
                         accept=".csv,.xlsx",

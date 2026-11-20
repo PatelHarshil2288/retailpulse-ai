@@ -12,7 +12,9 @@ from src.universal_analytics import (
     build_trend_figure,
     build_universal_figure,
     filter_dataset,
+    profile_workspace_payload,
 )
+from src.pages.data_workspace import serialize_workspace_dataset
 
 
 @pytest.fixture
@@ -47,6 +49,17 @@ def test_universal_controls_use_detected_columns(generic_data):
     }
 
 
+def test_workspace_profiles_are_not_reused_between_callbacks(generic_data):
+    payload = serialize_workspace_dataset(generic_data)
+
+    first_profile = profile_workspace_payload(payload)
+    first_profile["summary"]["rows"] = -1
+    next_profile = profile_workspace_payload(payload)
+
+    assert next_profile is not first_profile
+    assert next_profile["summary"]["rows"] == len(generic_data)
+
+
 def test_groups_generic_numeric_measures_by_category(generic_data):
     profile = profile_dataset(generic_data)
     controls = analysis_control_options(profile)
@@ -65,7 +78,7 @@ def test_groups_generic_numeric_measures_by_category(generic_data):
     ]
 
 
-def test_generic_date_grouping_uses_months_and_supports_line_chart(generic_data):
+def test_generic_date_grouping_uses_daily_periods_and_supports_line_chart(generic_data):
     controls = analysis_control_options(profile_dataset(generic_data))
     grouped = aggregate_dataset(
         generic_data,
@@ -85,11 +98,14 @@ def test_generic_date_grouping_uses_months_and_supports_line_chart(generic_data)
     )
 
     assert grouped.to_dict("records") == [
-        {"Category": "2024-01", "Value": 22},
-        {"Category": "2024-02", "Value": 142},
+        {"Category": "2024-01-02", "Value": 10},
+        {"Category": "2024-01-20", "Value": 12},
+        {"Category": "2024-02-02", "Value": 20},
+        {"Category": "2024-02-18", "Value": 22},
+        {"Category": "2024-02-25", "Value": 100},
     ]
     assert figure.data[0].type == "scatter"
-    assert figure.layout.title.text == "Sum Amount by EventDate"
+    assert figure.layout.title.text == "Daily Sum Amount by EventDate"
 
 
 def test_row_count_aggregation_counts_all_records(generic_data):
@@ -131,10 +147,23 @@ def test_correlation_and_trend_figures_use_detected_data(generic_data):
 
     assert correlation.data[0].type == "heatmap"
     assert trend.data[0].type == "scatter"
-    assert "Monthly mean" in trend.layout.title.text
+    assert "Daily mean" in trend.layout.title.text
     recommendations = build_analysis_recommendations(profile)
     assert any("correlation" in item.lower() for item in recommendations)
     assert any("trend" in item.lower() for item in recommendations)
+
+
+def test_trend_figure_groups_by_monday_start_weekly_periods(generic_data):
+    profile = profile_dataset(generic_data)
+
+    trend = build_trend_figure(
+        generic_data,
+        profile,
+        time_granularity="weekly",
+    )
+
+    assert "Weekly mean" in trend.layout.title.text
+    assert all(pd.Timestamp(period).weekday() == 0 for period in trend.data[0].x)
 
 
 def test_analytics_excludes_infinite_numeric_values(generic_data):

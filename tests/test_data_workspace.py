@@ -1,9 +1,13 @@
 import base64
+import gc
+import weakref
 from io import BytesIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pandas as pd
 import pytest
 
+from src.pages import data_workspace
 from src.pages.data_workspace import (
     MAX_UPLOAD_BASE64_LENGTH,
     build_dataset_upload_results,
@@ -157,6 +161,63 @@ def test_process_uploaded_dataset_rejects_empty_file():
         process_uploaded_dataset(_data_uri(b""), "empty.csv")
 
 
+def test_csv_row_limit_is_checked_before_full_dataframe_load(monkeypatch):
+    monkeypatch.setattr(data_workspace, "MAX_DASHBOARD_SALES_ROWS", 2)
+    content = _data_uri(b"Item,Value\nA,1\nB,2\nC,3\n")
+
+    with pytest.raises(ValueError, match="100,000-row workspace limit"):
+        process_uploaded_dataset(content, "large.csv")
+
+
+def test_csv_cell_limit_is_checked_during_streaming_scan(monkeypatch):
+    monkeypatch.setattr(data_workspace, "MAX_WORKSPACE_CELLS", 4)
+    content = _data_uri(b"Item,Value\nA,1\nB,2\n")
+
+    with pytest.raises(ValueError, match="2,000,000-cell workspace limit"):
+        process_uploaded_dataset(content, "many-cells.csv")
+
+
+def test_csv_column_limit_is_checked_from_header(monkeypatch):
+    monkeypatch.setattr(data_workspace, "MAX_WORKSPACE_COLUMNS", 2)
+    content = _data_uri(b"First,Second,Third\n1,2,3\n")
+
+    with pytest.raises(ValueError, match="2-column limit"):
+        process_uploaded_dataset(content, "many-columns.csv")
+
+
+def test_xlsx_expansion_limit_is_checked_before_workbook_parsing(monkeypatch):
+    monkeypatch.setattr(
+        data_workspace,
+        "MAX_XLSX_UNCOMPRESSED_BYTES",
+        100,
+    )
+    workbook = BytesIO()
+    with ZipFile(workbook, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("xl/workbook.xml", "A" * 1_000)
+    content = _data_uri(
+        workbook.getvalue(),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+    with pytest.raises(ValueError, match="expands beyond"):
+        process_uploaded_dataset(content, "expanded.xlsx")
+
+
+def test_xlsx_cell_limit_uses_sheet_dimensions_before_loading(monkeypatch):
+    monkeypatch.setattr(data_workspace, "MAX_WORKSPACE_CELLS", 4)
+    excel_file = BytesIO()
+    pd.DataFrame(
+        {"Item": ["A", "B", "C"], "Value": [1, 2, 3]}
+    ).to_excel(excel_file, index=False)
+    content = _data_uri(
+        excel_file.getvalue(),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+    with pytest.raises(ValueError, match="2,000,000-cell workspace limit"):
+        process_uploaded_dataset(content, "many-cells.xlsx")
+
+
 def test_workspace_dataset_payload_round_trips_generic_data():
     data = pd.DataFrame(
         {
@@ -176,6 +237,37 @@ def test_workspace_dataset_payload_round_trips_generic_data():
 def test_workspace_dataset_payload_rejects_malformed_data():
     with pytest.raises(ValueError, match="invalid"):
         deserialize_workspace_dataset("not-base64")
+
+
+@pytest.mark.parametrize(
+    ("deserialize", "payload_factory"),
+    [
+        (
+            deserialize_dashboard_sales,
+            lambda: serialize_dashboard_sales(
+                process_uploaded_data(
+                    _data_uri(_retail_csv().to_csv(index=False).encode("utf-8")),
+                    "retail.csv",
+                ).cleaned_transactions
+            ),
+        ),
+        (
+            deserialize_workspace_dataset,
+            lambda: serialize_workspace_dataset(pd.DataFrame({"value": [1, 2, 3]})),
+        ),
+    ],
+)
+def test_deserialized_datasets_are_not_retained_after_use(
+    deserialize,
+    payload_factory,
+):
+    restored = deserialize(payload_factory())
+    restored_reference = weakref.ref(restored)
+
+    del restored
+    gc.collect()
+
+    assert restored_reference() is None
 
 
 def test_workspace_dataset_preview_is_bounded_and_includes_profile():
@@ -208,6 +300,8 @@ def test_data_workspace_has_upload_and_size_limit():
 
     assert "retail-dataset-upload" in page_text
     assert "10 MB" in page_text
+    assert "2,000,000 cells" in page_text
+    assert "100 MB uncompressed" in page_text
     assert "InvoiceNo" in page_text
     assert "retail-worksheet-selector" in page_text
     assert "generic" not in page_text.lower()

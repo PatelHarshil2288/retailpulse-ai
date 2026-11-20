@@ -46,11 +46,15 @@ def _navigation_links(suffix):
             "/explorer",
             f"nav-explorer-{suffix}",
         ),
+        _route_link(
+            "Report Centre",
+            "/reports",
+            f"nav-reports-{suffix}",
+        ),
         _planned_link("Data Workspace"),
         _planned_link("AI Insights"),
         _planned_link("Forecast Studio"),
         _planned_link("Model Evaluation"),
-        _planned_link("Report Centre"),
         _planned_link("Documentation"),
         _planned_link("Settings"),
     ]

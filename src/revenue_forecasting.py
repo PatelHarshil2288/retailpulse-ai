@@ -1,137 +1,166 @@
-
-"""Revenue forecasting utilities for RetailPulse AI.
-
-Uses chronological backtesting to compare a naive baseline with a
-linear trend model. Forecasts are experimental because the available
-monthly history is limited.
-"""
+"""Chronological daily and weekly revenue forecasting utilities."""
 
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
+from src.time_series import (
+    DEFAULT_FORECAST_HORIZONS,
+    MINIMUM_FORECAST_HISTORY,
+    SEASONAL_PERIODS,
+    period_frequency,
+    period_starts,
+    validate_granularity,
+)
 
-MINIMUM_MONTHS = 6
-BACKTEST_MONTHS = 3
+
+BACKTEST_PERIODS = 28
 
 
-def validate_monthly_revenue(monthly_revenue):
-    """Validate and normalize a monthly revenue Series."""
-    if not isinstance(monthly_revenue, pd.Series):
-        raise TypeError("monthly_revenue must be a pandas Series.")
-
-    if len(monthly_revenue) < MINIMUM_MONTHS:
-        raise ValueError(
-            f"At least {MINIMUM_MONTHS} monthly observations are required."
-        )
-
-    if not isinstance(monthly_revenue.index, pd.DatetimeIndex):
+def validate_period_revenue(period_revenue, time_granularity="daily"):
+    """Validate and normalize a consecutive daily or weekly revenue series."""
+    validate_granularity(time_granularity)
+    if not isinstance(period_revenue, pd.Series):
+        raise TypeError("period_revenue must be a pandas Series.")
+    if not isinstance(period_revenue.index, pd.DatetimeIndex):
         raise TypeError("The Series index must be a DatetimeIndex.")
 
-    values = pd.to_numeric(monthly_revenue, errors="raise")
-
+    values = pd.to_numeric(period_revenue, errors="raise")
     if values.isna().any() or not np.isfinite(values.to_numpy()).all():
         raise ValueError("Revenue values must be finite and non-missing.")
 
     values = values.sort_index().astype(float)
-    values.index = values.index.to_period("M").to_timestamp()
-
+    values.index = pd.DatetimeIndex(
+        period_starts(values.index, time_granularity)
+    )
     if values.index.has_duplicates:
-        raise ValueError("Each month must have exactly one revenue value.")
+        raise ValueError("Each time period must have exactly one revenue value.")
 
-    expected_months = pd.date_range(
+    expected_periods = pd.date_range(
         start=values.index.min(),
         periods=len(values),
-        freq="MS",
+        freq=period_frequency(time_granularity),
     )
+    if not values.index.equals(expected_periods):
+        raise ValueError(
+            "Revenue history must have consecutive daily or weekly periods."
+        )
 
-    if not values.index.equals(expected_months):
-        raise ValueError("Monthly revenue must have consecutive months.")
-
+    minimum_history = MINIMUM_FORECAST_HISTORY[time_granularity]
+    if len(values) < minimum_history:
+        raise ValueError(
+            f"At least {minimum_history} consecutive "
+            f"{time_granularity} observations are required."
+        )
     return values
 
 
 def _predict_linear_trend(training_values, steps):
-    """Predict future values using a linear trend."""
+    """Predict future values using a non-negative linear trend."""
     x_train = np.arange(len(training_values)).reshape(-1, 1)
     y_train = np.asarray(training_values, dtype=float)
-
     model = LinearRegression()
     model.fit(x_train, y_train)
-
     x_future = np.arange(
         len(training_values),
         len(training_values) + steps,
     ).reshape(-1, 1)
-
-    # Revenue forecasts cannot be negative.
     return np.maximum(model.predict(x_future), 0.0)
 
 
-def evaluate_forecasting_models(monthly_revenue):
-    """Compare models using the final three months as a rolling test."""
-    values = validate_monthly_revenue(monthly_revenue)
+def _predict_model(model_name, training_values, steps, seasonal_period):
+    if model_name == "Last Period Baseline":
+        return np.repeat(float(training_values.iloc[-1]), steps)
+    if model_name == "Seasonal Naive":
+        seasonal_values = training_values.iloc[-seasonal_period:].to_numpy()
+        return np.resize(seasonal_values, steps).astype(float)
+    if model_name == "Linear Trend":
+        return _predict_linear_trend(training_values, steps)
+    raise ValueError(f"Unsupported revenue forecasting model: {model_name}")
 
-    test_months = min(BACKTEST_MONTHS, len(values) - MINIMUM_MONTHS + 1)
-    if test_months < 1:
-        raise ValueError("Not enough history for chronological backtesting.")
 
-    errors = {
-        "Last Month Baseline": [],
-        "Linear Trend": [],
-    }
+def evaluate_forecasting_models(period_revenue, time_granularity="daily"):
+    """Compare available baselines on a chronological holdout."""
+    values = validate_period_revenue(period_revenue, time_granularity)
+    minimum_history = MINIMUM_FORECAST_HISTORY[time_granularity]
+    test_periods = min(
+        DEFAULT_FORECAST_HORIZONS[time_granularity],
+        len(values) - minimum_history + 1,
+        BACKTEST_PERIODS,
+    )
+    test_start = len(values) - test_periods
+    seasonal_period = SEASONAL_PERIODS[time_granularity]
+    models = ["Last Period Baseline", "Linear Trend"]
+    if test_start >= seasonal_period:
+        models.append("Seasonal Naive")
 
-    for test_position in range(len(values) - test_months, len(values)):
-        training = values.iloc[:test_position]
-        actual = float(values.iloc[test_position])
-
-        baseline_prediction = float(training.iloc[-1])
-        trend_prediction = float(_predict_linear_trend(training, 1)[0])
-
-        errors["Last Month Baseline"].append(
-            abs(actual - baseline_prediction)
-        )
-        errors["Linear Trend"].append(
-            abs(actual - trend_prediction)
-        )
+    errors = {name: [] for name in models}
+    for position in range(test_start, len(values)):
+        training = values.iloc[:position]
+        actual = float(values.iloc[position])
+        for model_name in models:
+            prediction = float(
+                _predict_model(
+                    model_name,
+                    training,
+                    1,
+                    seasonal_period,
+                )[0]
+            )
+            errors[model_name].append(actual - prediction)
 
     results = pd.DataFrame(
         [
-            {"Model": name, "MAE": float(np.mean(model_errors))}
+            {
+                "Model": name,
+                "MAE": float(np.mean(np.abs(model_errors))),
+                "RMSE": float(np.sqrt(np.mean(np.square(model_errors)))),
+            }
             for name, model_errors in errors.items()
         ]
-    ).sort_values("MAE", ignore_index=True)
-
+    ).sort_values("RMSE", ignore_index=True)
     return results
 
 
-def create_revenue_forecast(monthly_revenue, horizon=3):
-    """Select the lower-MAE model and forecast future monthly revenue."""
-    values = validate_monthly_revenue(monthly_revenue)
+def create_revenue_forecast(
+    period_revenue,
+    horizon=None,
+    time_granularity="daily",
+):
+    """Select the lowest-error baseline and forecast future periods."""
+    validate_granularity(time_granularity)
+    if horizon is None:
+        horizon = DEFAULT_FORECAST_HORIZONS[time_granularity]
+    max_horizon = DEFAULT_FORECAST_HORIZONS[time_granularity]
+    if (
+        not isinstance(horizon, int)
+        or isinstance(horizon, bool)
+        or not 1 <= horizon <= max_horizon
+    ):
+        unit = "days" if time_granularity == "daily" else "weeks"
+        raise ValueError(
+            f"horizon must be an integer from 1 to {max_horizon} {unit}."
+        )
 
-    if not isinstance(horizon, int) or isinstance(horizon, bool) or horizon < 1:
-        raise ValueError("horizon must be a positive integer.")
-
-    evaluation = evaluate_forecasting_models(values)
+    values = validate_period_revenue(period_revenue, time_granularity)
+    evaluation = evaluate_forecasting_models(values, time_granularity)
     selected_model = evaluation.iloc[0]["Model"]
-
-    if selected_model == "Last Month Baseline":
-        predictions = np.repeat(float(values.iloc[-1]), horizon)
-    else:
-        predictions = _predict_linear_trend(values, horizon)
-
-    future_months = pd.date_range(
-        start=values.index[-1] + pd.offsets.MonthBegin(1),
-        periods=horizon,
-        freq="MS",
+    predictions = _predict_model(
+        selected_model,
+        values,
+        horizon,
+        SEASONAL_PERIODS[time_granularity],
     )
-
+    future_periods = pd.date_range(
+        values.index[-1],
+        periods=horizon + 1,
+        freq=period_frequency(time_granularity),
+    )[1:]
     forecast = pd.DataFrame(
         {
-            "Month": future_months,
+            "Period": future_periods,
             "Forecast Revenue": predictions,
             "Model": selected_model,
         }
     )
-
     return forecast, evaluation

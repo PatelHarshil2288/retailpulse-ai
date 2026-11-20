@@ -196,28 +196,37 @@ def build_overview_page():
                                 ],
                             ),
                             html.Article(
-                                className="rp-overview-card",
+                                className=(
+                                    "rp-overview-card "
+                                    "rp-overview-card-active"
+                                ),
                                 children=[
                                     html.Div(
                                         className="rp-card-topline",
                                         children=[
                                             html.Span(
-                                                "AI AND REPORTING",
+                                                "REPORTING",
                                                 className="rp-eyebrow",
                                             ),
                                             html.Span(
-                                                "Planned",
-                                                className="rp-status-pill",
+                                                "Available",
+                                                className=(
+                                                    "rp-status-pill "
+                                                    "rp-status-available"
+                                                ),
                                             ),
                                         ],
                                     ),
-                                    html.H3("Insights and Reports"),
+                                    html.H3("Report Centre"),
                                     html.P(
-                                        "A provider-independent AI "
-                                        "explanation layer and PDF/Excel "
-                                        "report centre are planned. "
-                                        "Current findings are calculated "
-                                        "deterministically."
+                                        "Download evidence-based PDF and "
+                                        "Excel reports, analytical summaries, "
+                                        "and the uploaded dataset."
+                                    ),
+                                    dcc.Link(
+                                        "Open Report Centre",
+                                        href="/reports",
+                                        className="rp-primary-action",
                                     ),
                                 ],
                             ),

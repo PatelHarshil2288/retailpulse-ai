@@ -6,9 +6,13 @@ same invoice and highlights the strongest cross-sell signals in the dataset.
 
 from __future__ import annotations
 
+from collections import Counter
 from itertools import combinations
 
 import pandas as pd
+
+
+MAX_PAIR_CANDIDATES = 1_000_000
 
 
 def build_product_associations(sales, max_pairs=10):
@@ -49,44 +53,55 @@ def build_product_associations(sales, max_pairs=10):
         .to_list()
     )
 
-    pair_rows = []
+    pair_candidates = sum(
+        len(products) * (len(products) - 1) // 2
+        for products in invoice_products
+    )
+    if pair_candidates > MAX_PAIR_CANDIDATES:
+        raise ValueError(
+            f"Exact cross-sell analysis exceeds the "
+            f"{MAX_PAIR_CANDIDATES:,} pair-work "
+            "limit. Narrow the country or date filters and try again."
+        )
+
+    pair_counts = Counter()
     for products in invoice_products:
         if len(products) < 2:
             continue
-        for product_a, product_b in combinations(products, 2):
-            pair_rows.append((product_a, product_b))
+        pair_counts.update(combinations(products, 2))
 
-    if not pair_rows:
+    if not pair_counts:
         return pd.DataFrame(
             columns=["ProductA", "ProductB", "CoPurchaseCount", "Support", "ProductPair"]
         )
 
-    pair_data = pd.DataFrame(pair_rows, columns=["ProductA", "ProductB"])
-    pair_summary = (
-        pair_data.groupby(["ProductA", "ProductB"], as_index=False)
-        .size()
-        .rename(columns={"size": "CoPurchaseCount"})
-    )
-
     total_invoices = data["InvoiceNo"].nunique()
-    if total_invoices:
-        pair_summary["Support"] = (
-            pair_summary["CoPurchaseCount"] / total_invoices * 100
-        )
-    else:
-        pair_summary["Support"] = 0.0
-
-    pair_summary["ProductPair"] = (
-        pair_summary["ProductA"] + " + " + pair_summary["ProductB"]
+    top_pairs = sorted(
+        pair_counts.items(),
+        key=lambda item: (-item[1], item[0][0], item[0][1]),
+    )[:max_pairs]
+    pair_summary = pd.DataFrame(
+        [
+            {
+                "ProductA": product_a,
+                "ProductB": product_b,
+                "CoPurchaseCount": count,
+                "Support": (
+                    count / total_invoices * 100 if total_invoices else 0.0
+                ),
+                "ProductPair": f"{product_a} + {product_b}",
+            }
+            for (product_a, product_b), count in top_pairs
+        ],
+        columns=[
+            "ProductA",
+            "ProductB",
+            "CoPurchaseCount",
+            "Support",
+            "ProductPair",
+        ],
     )
-
-    return (
-        pair_summary.sort_values(
-            ["CoPurchaseCount", "Support"], ascending=[False, False]
-        )
-        .head(max_pairs)
-        .reset_index(drop=True)
-    )
+    return pair_summary.reset_index(drop=True)
 
 
 def summarize_top_product_pair(sales, max_pairs=10):

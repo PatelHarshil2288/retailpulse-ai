@@ -1,7 +1,5 @@
 """Statistical and visualization helpers for arbitrary tabular datasets."""
 
-from functools import lru_cache
-
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -9,6 +7,7 @@ import plotly.graph_objects as go
 
 from src.data_profiling import profile_dataset
 from src.pages.data_workspace import deserialize_workspace_dataset
+from src.time_series import granularity_label, period_starts, validate_granularity
 
 
 ROW_COUNT_MEASURE = "__row_count__"
@@ -25,9 +24,8 @@ NUMERIC_AGGREGATIONS = {"sum", "mean", "median", "min", "max"}
 MAX_GROUPS = 15
 
 
-@lru_cache(maxsize=2)
 def profile_workspace_payload(encoded_payload):
-    """Profile a session payload once while the user explores its charts."""
+    """Profile a workspace payload without retaining it across callbacks."""
     return profile_dataset(deserialize_workspace_dataset(encoded_payload))
 
 
@@ -112,6 +110,7 @@ def aggregate_dataset(
     aggregation,
     numeric_columns=(),
     date_columns=(),
+    time_granularity="daily",
 ):
     """Group a generic dataset using an explicit, type-valid aggregation."""
     if not isinstance(data, pd.DataFrame):
@@ -139,15 +138,9 @@ def aggregate_dataset(
         columns.append(measure)
     working = data.loc[:, columns].copy()
     if dimension in date_columns:
-        dates = pd.to_datetime(
-            working[dimension],
-            errors="coerce",
-            format="mixed",
-            utc=True,
-        )
         groups = (
-            dates.dt.tz_convert(None)
-            .dt.to_period("M")
+            period_starts(working[dimension], time_granularity)
+            .dt.strftime("%Y-%m-%d")
             .astype("string")
             .fillna("Missing")
         )
@@ -194,6 +187,7 @@ def build_universal_figure(
     aggregation,
     chart_type="bar",
     date_columns=(),
+    time_granularity="daily",
 ):
     """Build an interactive generic bar or time-series chart."""
     if chart_type not in {"bar", "line"}:
@@ -201,7 +195,15 @@ def build_universal_figure(
     measure_label = (
         "Rows" if measure == ROW_COUNT_MEASURE else str(measure)
     )
-    title = f"{AGGREGATIONS[aggregation]} {measure_label} by {dimension}"
+    title_prefix = (
+        f"{granularity_label(time_granularity)} "
+        if dimension in date_columns
+        else ""
+    )
+    title = (
+        f"{title_prefix}{AGGREGATIONS[aggregation]} "
+        f"{measure_label} by {dimension}"
+    )
     if grouped.empty:
         return build_empty_figure("No records match the current selection.")
 
@@ -286,8 +288,9 @@ def build_correlation_figure(data, profile):
     return figure
 
 
-def build_trend_figure(data, profile):
-    """Show a monthly mean trend when date and numeric columns are detected."""
+def build_trend_figure(data, profile, time_granularity="daily"):
+    """Show a daily or weekly mean trend when suitable columns are detected."""
+    validate_granularity(time_granularity)
     date_column = next(
         (
             item["name"]
@@ -325,14 +328,15 @@ def build_trend_figure(data, profile):
     ).dropna()
     if trend.empty:
         return build_empty_figure("No valid date and numeric pairs were found.")
-    trend["Month"] = trend["Date"].dt.to_period("M").dt.to_timestamp()
-    trend = trend.groupby("Month", as_index=False)["Value"].mean()
+    trend["Period"] = period_starts(trend["Date"], time_granularity)
+    trend = trend.groupby("Period", as_index=False)["Value"].mean()
+    label = granularity_label(time_granularity)
     figure = px.line(
         trend,
-        x="Month",
+        x="Period",
         y="Value",
         markers=True,
-        title=f"Monthly mean of {measure} by {date_column}",
+        title=f"{label} mean of {measure} by {date_column}",
     )
     figure.update_layout(
         height=420,
@@ -371,7 +375,7 @@ def build_analysis_recommendations(profile):
         )
     if date_columns and numeric_columns:
         suggestions.append(
-            f"Explore a monthly mean trend for {numeric_columns[0]} by "
+            f"Explore daily or weekly trends for {numeric_columns[0]} by "
             f"{date_columns[0]}; select another aggregation if appropriate."
         )
     if len(numeric_columns) >= 2:

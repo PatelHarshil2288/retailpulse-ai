@@ -3,11 +3,12 @@
 import pandas as pd
 import plotly.express as px
 from dash import dcc, html
+from src.time_series import granularity_label, period_display, period_starts
 
 
 DIMENSIONS = {
     "Country": ("Country", "Country"),
-    "Month": ("Month", "InvoiceDate"),
+    "Time period": ("Time period", "InvoiceDate"),
     "Product": ("Product", "Description"),
     "Customer": ("Customer", "CustomerID"),
     "Stock code": ("Stock code", "StockCode"),
@@ -99,8 +100,8 @@ def build_visual_explorer_page():
                             ),
                             html.P(
                                 "Category charts show the top 15 groups by "
-                                "the selected measure. Monthly charts show "
-                                "all available months.",
+                                "the selected measure. Time charts support "
+                                "daily or Monday-start weekly periods.",
                                 className="rp-section-description",
                             ),
                         ],
@@ -137,7 +138,22 @@ def build_visual_explorer_page():
                                                     }
                                                     for value, (label, _) in DIMENSIONS.items()
                                                 ],
-                                                "Month",
+                                                "Time period",
+                                            ),
+                                            _dropdown(
+                                                "Time granularity",
+                                                "visual-explorer-time-granularity",
+                                                [
+                                                    {
+                                                        "label": "Daily",
+                                                        "value": "daily",
+                                                    },
+                                                    {
+                                                        "label": "Weekly (Monday start)",
+                                                        "value": "weekly",
+                                                    },
+                                                ],
+                                                "daily",
                                             ),
                                             _dropdown(
                                                 "Measure",
@@ -367,6 +383,21 @@ def build_universal_analytics_panel():
                                 className="rp-explorer-controls",
                                 children=[
                                     _dropdown(
+                                        "Time granularity",
+                                        "universal-time-granularity",
+                                        [
+                                            {
+                                                "label": "Daily",
+                                                "value": "daily",
+                                            },
+                                            {
+                                                "label": "Weekly (Monday start)",
+                                                "value": "weekly",
+                                            },
+                                        ],
+                                        "daily",
+                                    ),
+                                    _dropdown(
                                         "Group by",
                                         "universal-dimension",
                                         [],
@@ -526,6 +557,266 @@ def build_universal_analytics_panel():
                             html.Div(
                                 className="rp-analysis-detail-card",
                                 children=[
+                                    html.H3(
+                                        "AI insights (deterministic)"
+                                    ),
+                                    html.P(
+                                        "These narrative insights are "
+                                        "generated from measured profile "
+                                        "evidence and do not use external "
+                                        "model calls."
+                                    ),
+                                    html.Ul(id="universal-ai-insights"),
+                                ],
+                            ),
+                            html.Div(
+                                className="rp-analysis-detail-card",
+                                children=[
+                                    html.H3("Machine Learning suitability"),
+                                    html.P(
+                                        "This pre-training assessment checks "
+                                        "readiness signals and suggests "
+                                        "safe baseline workflows."
+                                    ),
+                                    html.Div(id="universal-ml-suitability"),
+                                ],
+                            ),
+                            html.Div(
+                                className="rp-analysis-detail-card",
+                                children=[
+                                    html.H3(
+                                        "Baseline model evaluation"
+                                    ),
+                                    html.P(
+                                        "Confirm a target column, choose an "
+                                        "evaluation mode, and run a baseline "
+                                        "comparison. Model workflows accept "
+                                        "up to 20,000 rows per run."
+                                    ),
+                                    html.Div(
+                                        className="rp-explorer-controls",
+                                        children=[
+                                            _dropdown(
+                                                "Target column",
+                                                "universal-ml-target",
+                                                [],
+                                                None,
+                                            ),
+                                            _dropdown(
+                                                "Evaluation mode",
+                                                "universal-ml-task",
+                                                [
+                                                    {
+                                                        "label": "Auto-detect",
+                                                        "value": "auto",
+                                                    },
+                                                    {
+                                                        "label": "Regression",
+                                                        "value": "regression",
+                                                    },
+                                                    {
+                                                        "label": "Classification",
+                                                        "value": "classification",
+                                                    },
+                                                ],
+                                                "auto",
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        className="rp-upload-actions",
+                                        children=[
+                                            html.Button(
+                                                "Run baseline evaluation",
+                                                id="universal-ml-run-button",
+                                                className="rp-primary-action",
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(id="universal-ml-evaluation"),
+                                ],
+                            ),
+                            html.Div(
+                                className="rp-analysis-detail-card",
+                                children=[
+                                    html.H3(
+                                        "Clustering and anomaly analysis"
+                                    ),
+                                    html.P(
+                                        "Choose features explicitly. Results "
+                                        "are exploratory signals, not "
+                                        "automatic business decisions. Runs "
+                                        "are limited to 20,000 rows."
+                                    ),
+                                    html.Div(
+                                        className="rp-explorer-controls",
+                                        children=[
+                                            html.Div(
+                                                className="rp-explorer-field",
+                                                children=[
+                                                    html.Label(
+                                                        "Feature columns",
+                                                        htmlFor=(
+                                                            "universal-ml-features"
+                                                        ),
+                                                    ),
+                                                    dcc.Dropdown(
+                                                        id="universal-ml-features",
+                                                        options=[],
+                                                        value=[],
+                                                        multi=True,
+                                                        clearable=True,
+                                                        searchable=True,
+                                                    ),
+                                                ],
+                                            ),
+                                            _dropdown(
+                                                "Unsupervised workflow",
+                                                "universal-ml-unsupervised-type",
+                                                [
+                                                    {
+                                                        "label": "K-means clustering",
+                                                        "value": "clustering",
+                                                    },
+                                                    {
+                                                        "label": "Anomaly detection",
+                                                        "value": "anomaly",
+                                                    },
+                                                ],
+                                                "clustering",
+                                            ),
+                                            html.Div(
+                                                className="rp-explorer-field",
+                                                children=[
+                                                    html.Label(
+                                                        "Number of clusters",
+                                                        htmlFor=(
+                                                            "universal-ml-clusters"
+                                                        ),
+                                                    ),
+                                                    dcc.Input(
+                                                        id="universal-ml-clusters",
+                                                        type="number",
+                                                        min=2,
+                                                        max=10,
+                                                        step=1,
+                                                        value=3,
+                                                    ),
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        className="rp-upload-actions",
+                                        children=[
+                                            html.Button(
+                                                "Run unsupervised analysis",
+                                                id="universal-ml-unsupervised-run",
+                                                className="rp-primary-action",
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="universal-ml-unsupervised-results"
+                                    ),
+                                ],
+                            ),
+                            html.Div(
+                                className="rp-analysis-detail-card",
+                                children=[
+                                    html.H3("Time-series forecasting"),
+                                    html.P(
+                                        "Choose a detected date and numeric "
+                                        "measure. Models are evaluated on a "
+                                        "chronological holdout."
+                                    ),
+                                    html.Div(
+                                        className="rp-explorer-controls",
+                                        children=[
+                                            _dropdown(
+                                                "Date column",
+                                                "universal-forecast-date",
+                                                [],
+                                                None,
+                                            ),
+                                            _dropdown(
+                                                "Numeric measure",
+                                                "universal-forecast-measure",
+                                                [],
+                                                None,
+                                            ),
+                                            _dropdown(
+                                                "Time granularity",
+                                                "universal-forecast-granularity",
+                                                [
+                                                    {
+                                                        "label": "Daily",
+                                                        "value": "daily",
+                                                    },
+                                                    {
+                                                        "label": "Weekly (Monday start)",
+                                                        "value": "weekly",
+                                                    },
+                                                ],
+                                                "daily",
+                                            ),
+                                            _dropdown(
+                                                "Period aggregation",
+                                                "universal-forecast-aggregation",
+                                                [
+                                                    {
+                                                        "label": "Sum",
+                                                        "value": "sum",
+                                                    },
+                                                    {
+                                                        "label": "Mean",
+                                                        "value": "mean",
+                                                    },
+                                                ],
+                                                "sum",
+                                            ),
+                                            html.Div(
+                                                className="rp-explorer-field",
+                                                children=[
+                                                    html.Label(
+                                                        "Forecast horizon (days or weeks)",
+                                                        id=(
+                                                            "universal-forecast-horizon-label"
+                                                        ),
+                                                        htmlFor=(
+                                                            "universal-forecast-horizon"
+                                                        ),
+                                                    ),
+                                                    dcc.Input(
+                                                        id="universal-forecast-horizon",
+                                                        type="number",
+                                                        min=1,
+                                                        max=28,
+                                                        step=1,
+                                                        value=28,
+                                                    ),
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        className="rp-upload-actions",
+                                        children=[
+                                            html.Button(
+                                                "Evaluate and forecast",
+                                                id="universal-forecast-run",
+                                                className="rp-primary-action",
+                                            ),
+                                        ],
+                                    ),
+                                    html.Div(
+                                        id="universal-forecast-results"
+                                    ),
+                                ],
+                            ),
+                            html.Div(
+                                className="rp-analysis-detail-card",
+                                children=[
                                     html.H3("Numeric summary"),
                                     html.Div(
                                         id="universal-analysis-statistics",
@@ -560,8 +851,11 @@ def build_universal_analytics_panel():
                                             html.H2("Date trend"),
                                             html.P(
                                                 "When available, this chart "
-                                                "shows monthly means for the "
-                                                "first detected numeric column."
+                                                "shows daily or Monday-start "
+                                                "weekly means for the first "
+                                                "detected numeric column. "
+                                                "Choose the time granularity "
+                                                "in the analysis controls."
                                             ),
                                             dcc.Graph(
                                                 id="universal-trend-chart",
@@ -613,7 +907,13 @@ def filter_sales(sales, filter_column=None, filter_value=None):
     return sales.loc[matches].copy()
 
 
-def aggregate_sales(sales, dimension, measure, aggregation=None):
+def aggregate_sales(
+    sales,
+    dimension,
+    measure,
+    aggregation=None,
+    time_granularity="daily",
+):
     """Aggregate sales into chart-ready groups, limiting category cardinality."""
     if dimension not in DIMENSIONS:
         raise ValueError(f"Unsupported visual-explorer dimension: {dimension}")
@@ -640,11 +940,11 @@ def aggregate_sales(sales, dimension, measure, aggregation=None):
         )
 
     data = sales[[dimension_column, measure_column]].copy()
-    if dimension == "Month":
-        data[dimension_column] = pd.to_datetime(
+    if dimension == "Time period":
+        data[dimension_column] = period_starts(
             data[dimension_column],
-            errors="coerce",
-        ).dt.to_period("M").dt.to_timestamp()
+            time_granularity,
+        )
         data = data.dropna(subset=[dimension_column])
     else:
         data[dimension_column] = (
@@ -670,9 +970,11 @@ def aggregate_sales(sales, dimension, measure, aggregation=None):
         .reset_index()
         .rename(columns={dimension_column: "Category"})
     )
-    if dimension == "Month":
+    if dimension == "Time period":
         grouped = grouped.sort_values("Category")
-        grouped["Category"] = grouped["Category"].dt.strftime("%b %Y")
+        grouped["Category"] = grouped["Category"].map(
+            lambda value: period_display(value, time_granularity)
+        )
     else:
         grouped = grouped.sort_values(
             "Value",
@@ -690,15 +992,23 @@ def build_visual_explorer_figure(
     measure,
     chart_type,
     aggregation=None,
+    time_granularity="daily",
 ):
     """Build a chart after grouping the selected active sales data."""
-    grouped = aggregate_sales(sales, dimension, measure, aggregation)
+    grouped = aggregate_sales(
+        sales,
+        dimension,
+        measure,
+        aggregation,
+        time_granularity,
+    )
     return build_visual_explorer_chart(
         grouped,
         dimension,
         measure,
         chart_type,
         aggregation or DEFAULT_AGGREGATIONS[measure],
+        time_granularity,
     )
 
 
@@ -708,15 +1018,29 @@ def build_visual_explorer_chart(
     measure,
     chart_type,
     aggregation,
+    time_granularity="daily",
 ):
     """Build a Plotly chart from grouped data."""
     if chart_type not in CHART_TYPES:
         raise ValueError(f"Unsupported visual-explorer chart type: {chart_type}")
 
-    dimension_label = DIMENSIONS[dimension][0]
+    dimension_label = (
+        (
+            "Date"
+            if time_granularity == "daily"
+            else "Week starting Monday"
+        )
+        if dimension == "Time period"
+        else DIMENSIONS[dimension][0]
+    )
     measure_label = MEASURES[measure][0]
     aggregation_label = AGGREGATIONS[aggregation]
-    title = f"{aggregation_label} {measure_label} by {dimension_label}"
+    title = (
+        f"{aggregation_label} {measure_label} by "
+        f"{dimension_label} ({granularity_label(time_granularity)})"
+        if dimension == "Time period"
+        else f"{aggregation_label} {measure_label} by {dimension_label}"
+    )
 
     if chart_type == "pie":
         figure = px.pie(
@@ -751,7 +1075,7 @@ def build_visual_explorer_chart(
                 "line": {"width": 2, "color": "#e9f7ff"},
             },
         )
-    elif dimension == "Month":
+    elif dimension == "Time period":
         figure = px.bar(
             grouped,
             x="Category",
@@ -771,7 +1095,7 @@ def build_visual_explorer_chart(
         figure.update_yaxes(categoryorder="total ascending")
 
     if measure in {"Revenue", "UnitPrice"} and chart_type in {"bar", "line"}:
-        if dimension == "Month" or chart_type == "line":
+        if dimension == "Time period" or chart_type == "line":
             figure.update_yaxes(tickprefix="£")
         else:
             figure.update_xaxes(tickprefix="£")

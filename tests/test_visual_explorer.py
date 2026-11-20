@@ -76,12 +76,27 @@ def test_aggregates_measures_by_selected_dimension(sample_sales):
     ]
 
 
-def test_month_dimension_keeps_all_months_in_order(sample_sales):
-    grouped = aggregate_sales(sample_sales, "Month", "Revenue")
+def test_daily_time_dimension_keeps_all_dates_in_order(sample_sales):
+    grouped = aggregate_sales(sample_sales, "Time period", "Revenue")
 
     assert grouped.to_dict("records") == [
-        {"Category": "Jan 2024", "Value": 13.0},
-        {"Category": "Feb 2024", "Value": 20.0},
+        {"Category": "05 Jan 2024", "Value": 10.0},
+        {"Category": "06 Jan 2024", "Value": 3.0},
+        {"Category": "05 Feb 2024", "Value": 20.0},
+    ]
+
+
+def test_weekly_time_dimension_uses_monday_start_periods(sample_sales):
+    grouped = aggregate_sales(
+        sample_sales,
+        "Time period",
+        "Revenue",
+        time_granularity="weekly",
+    )
+
+    assert grouped.to_dict("records") == [
+        {"Category": "Week of 01 Jan 2024", "Value": 13.0},
+        {"Category": "Week of 05 Feb 2024", "Value": 20.0},
     ]
 
 
@@ -119,20 +134,42 @@ def test_builds_selected_chart_type(sample_sales, chart_type):
         assert figure.data[0].type == "bar"
 
 
-def test_builds_monthly_revenue_line_chart(sample_sales):
+def test_builds_daily_revenue_line_chart(sample_sales):
     figure = build_visual_explorer_figure(
         sample_sales,
-        "Month",
+        "Time period",
         "Revenue",
         "line",
     )
 
-    assert figure.layout.title.text == "Sum Revenue by Month"
+    assert figure.layout.title.text == "Sum Revenue by Date (Daily)"
     assert figure.data[0].type == "scatter"
-    assert list(figure.data[0].x) == ["Jan 2024", "Feb 2024"]
-    assert list(figure.data[0].y) == [13.0, 20.0]
+    assert list(figure.data[0].x) == [
+        "05 Jan 2024",
+        "06 Jan 2024",
+        "05 Feb 2024",
+    ]
+    assert list(figure.data[0].y) == [10.0, 3.0, 20.0]
     assert figure.data[0].line.width == 3
     assert figure.data[0].marker.size == 8
+
+
+def test_builds_weekly_revenue_bar_chart(sample_sales):
+    figure = build_visual_explorer_figure(
+        sample_sales,
+        "Time period",
+        "Revenue",
+        "bar",
+        time_granularity="weekly",
+    )
+
+    assert figure.layout.title.text == (
+        "Sum Revenue by Week starting Monday (Weekly)"
+    )
+    assert list(figure.data[0].x) == [
+        "Week of 01 Jan 2024",
+        "Week of 05 Feb 2024",
+    ]
 
 
 def test_rejects_unknown_dimension(sample_sales):
@@ -161,5 +198,15 @@ def test_universal_analytics_panel_contains_generic_interactions():
     assert "universal-dimension" in page_text
     assert "universal-measure" in page_text
     assert "universal-analytics-chart" in page_text
+    assert "universal-ai-insights" in page_text
+    assert "universal-ml-suitability" in page_text
+    assert "universal-ml-target" in page_text
+    assert "universal-ml-evaluation" in page_text
+    assert "universal-ml-features" in page_text
+    assert "universal-ml-unsupervised-run" in page_text
+    assert "universal-ml-unsupervised-results" in page_text
+    assert "universal-forecast-date" in page_text
+    assert "universal-forecast-run" in page_text
+    assert "universal-forecast-results" in page_text
     assert "universal-correlation-chart" in page_text
     assert "universal-trend-chart" in page_text
