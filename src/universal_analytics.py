@@ -133,30 +133,24 @@ def aggregate_dataset(
     if data.empty:
         return pd.DataFrame(columns=["Category", "Value"])
 
-    columns = [dimension]
-    if measure != ROW_COUNT_MEASURE and measure != dimension:
-        columns.append(measure)
-    working = data.loc[:, columns].copy()
     if dimension in date_columns:
         groups = (
-            period_starts(working[dimension], time_granularity)
+            period_starts(data[dimension], time_granularity)
             .dt.strftime("%Y-%m-%d")
             .astype("string")
             .fillna("Missing")
         )
     else:
-        groups = working[dimension].astype("string").fillna("Missing")
-    working["_group"] = groups
+        groups = data[dimension].astype("string").fillna("Missing")
 
     if measure == ROW_COUNT_MEASURE:
-        grouped = working.groupby("_group", dropna=False).size()
+        grouped = data.groupby(groups, dropna=False).size()
     else:
-        values = working[measure]
+        values = data[measure]
         if aggregation in NUMERIC_AGGREGATIONS:
             values = pd.to_numeric(values, errors="coerce")
             values = values.where(np.isfinite(values), np.nan)
-        working["_value"] = values
-        group_by = working.groupby("_group", dropna=False)["_value"]
+        group_by = values.groupby(groups, dropna=False)
         if aggregation == "count":
             grouped = group_by.count()
         elif aggregation == "nunique":
@@ -165,9 +159,9 @@ def aggregate_dataset(
             grouped = group_by.agg(aggregation)
 
     result = (
-        grouped.rename("Value")
+        grouped.rename_axis("Category")
+        .rename("Value")
         .reset_index()
-        .rename(columns={"_group": "Category"})
     )
     if dimension in date_columns:
         result = result.sort_values("Category", kind="stable")

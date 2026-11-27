@@ -78,6 +78,25 @@ def test_groups_generic_numeric_measures_by_category(generic_data):
     ]
 
 
+@pytest.mark.parametrize("aggregation", ["sum", "count", "nunique"])
+def test_aggregation_preserves_columns_named_like_internal_fields(aggregation):
+    data = pd.DataFrame(
+        {"_value": ["A", "A", "B"], "_group": [2, 3, 7]},
+        index=[1, 1, 2],
+    )
+    expected = {
+        "sum": [{"Category": "B", "Value": 7}, {"Category": "A", "Value": 5}],
+        "count": [{"Category": "A", "Value": 2}, {"Category": "B", "Value": 1}],
+        "nunique": [{"Category": "A", "Value": 2}, {"Category": "B", "Value": 1}],
+    }
+
+    grouped = aggregate_dataset(
+        data, "_value", "_group", aggregation, numeric_columns=["_group"]
+    )
+
+    assert grouped.to_dict("records") == expected[aggregation]
+
+
 def test_generic_date_grouping_uses_daily_periods_and_supports_line_chart(generic_data):
     controls = analysis_control_options(profile_dataset(generic_data))
     grouped = aggregate_dataset(
